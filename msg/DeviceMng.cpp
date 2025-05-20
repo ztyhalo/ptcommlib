@@ -216,7 +216,7 @@ bool DeviceMng::SetupDriver(void)
         pdriver  = new driver(cfg.id, cfg.name, keytemp, keytemp + 1, keytemp + 2, keytemp + 3, keytemp + 4);
 
         m_pMsgMngServer->m_driverTable.insert(cfg.id, pdriver);
-        if (!pdriver->InitMsg())
+        if (!pdriver->initMsg())
             return false;
 
         cfg.script = CfgList.at(i).script;
@@ -224,7 +224,7 @@ bool DeviceMng::SetupDriver(void)
             cfg, SysMinKey + DEVICEMNG_SHARE_KEY_NUM + DRIVER_SHARE_KEY_NUM * (CfgList.at(i).id - 1), SysMinKey + 1);
         usekey += DRIVER_SHARE_KEY_NUM;
 
-        if(!pdriver->Msg_GetInfo())
+        if(!pdriver->msgGetInfo())
         {
             zprintf1("DeviceMng device[%d] Msg_GetInfo error!\n", cfg.id);
             return false;
@@ -236,7 +236,7 @@ bool DeviceMng::SetupDriver(void)
         }
 
 
-        if (!pdriver->Init())
+        if (!pdriver->init())
         {
             struct timeval tv;
             gettimeofday(&tv, NULL);
@@ -261,7 +261,7 @@ void DeviceMng::SendHeartToDriver(void)
     m_pMsgMngServer->m_recvDriMsg.lock();
     for (item = m_pMsgMngServer->m_driverTable.begin(); item != m_pMsgMngServer->m_driverTable.end(); ++item)
     {
-        item.value()->Msg_SendHeart();
+        item.value()->msgSendHeart();
     }
     m_pMsgMngServer->m_recvDriMsg.unlock();
 }
@@ -276,9 +276,9 @@ void DeviceMng::DriverHeartMng(void)
     {
         if(item.value()->m_heartMark) //心跳错误
         {
-            if (item.value()->ComState != COMSTATE_ABNORMAL)
+            if (item.value()->m_comState != COMSTATE_ABNORMAL)
             {
-                item.value()->ComState = COMSTATE_ABNORMAL;
+                item.value()->m_comState = COMSTATE_ABNORMAL;
                 data                   = (uint8_t) item.key();
                 // m_pMsgMngServer->BroadcastToApp(MSG_TYPE_AppReportDriverComAbnormal, &data, 1);
                 zprintf1("DeviceMng report driver com abnormal**!\n");
@@ -287,9 +287,9 @@ void DeviceMng::DriverHeartMng(void)
         }
         else
         {
-            if (item.value()->ComState != COMSTATE_NORMAL)
+            if (item.value()->m_comState != COMSTATE_NORMAL)
             {
-                item.value()->ComState = COMSTATE_NORMAL;
+                item.value()->m_comState = COMSTATE_NORMAL;
                 data                   = (uint8_t) item.key();
                 // pMsgMng->BroadcastToApp(MSG_TYPE_AppReportDriverComNormal, &data, 1);
                 //qDebug() << "DeviceMng report driver com normal";

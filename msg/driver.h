@@ -59,22 +59,22 @@ typedef enum
 class driver
 {
   private:
-    QString driver_name;
+    QString         m_drivName;
 
   public:
-    int             driver_id;
-    shm*            pshm;
-    MsgSendBase *   pmsg;
+    int             m_driverId;
+    shm*            m_pShm;
+    MsgSendBase *   m_pSendmsg;
     int             m_heartMark;
-    sDriverInfoType DriverInfo;
-    eComStateType   ComState;
+    sDriverInfoType m_driverInfo;
+    eComStateType   m_comState;
 
     driver(int id, QString& name, int shminkey, int shmoutkey, int shmoutsem, int msgkey, int shmstatekey);
     ~driver();
-    bool Init(void);
-    bool InitMsg(void);
-    bool Msg_SendHeart(void);
-    bool Msg_GetInfo(void);
+    bool init(void);
+    bool initMsg(void);
+    bool msgSendHeart(void);
+    bool msgGetInfo(void);
 };
 
 #endif // DRIVER_H

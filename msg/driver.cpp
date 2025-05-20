@@ -4,27 +4,27 @@
 
 driver::driver(int id, QString& name, int shminkey, int shmoutkey, int shmoutsem, int msgkey, int shmstatekey)
 {
-    driver_id   = id;
-    driver_name = name;
-    ComState    = COMSTATE_NORMAL;
+    m_driverId   = id;
+    m_drivName = name;
+    m_comState    = COMSTATE_NORMAL;
 
-    pshm = new shm(shminkey, shmoutkey, shmoutsem, shmstatekey);
-    pmsg = new MsgSendBase(msgkey);
+    m_pShm = new shm(shminkey, shmoutkey, shmoutsem, shmstatekey);
+    m_pSendmsg = new MsgSendBase(msgkey);
     m_heartMark = 0;
 }
 
 driver::~driver()
 {
     zprintf3("DeviceMng driver exit begin:\n");
-    DELETE(pshm);
+    DELETE(m_pShm);
     zprintf3("DeviceMng DELETE(pshm),\n");
-    DELETE(pmsg);
+    DELETE(m_pSendmsg);
     zprintf3("DeviceMng driver exit end.\n");
 }
 
-bool driver::InitMsg(void)
+bool driver::initMsg(void)
 {
-    if (!pmsg->create_object())
+    if (!m_pSendmsg->create_object())
     {
         zprintf1("DeviceMng driver init :create_object error!\n");
         return false;
@@ -32,16 +32,16 @@ bool driver::InitMsg(void)
     return true;
 }
 
-bool driver::Init(void)
+bool driver::init(void)
 {
 
-    zprintf3("DeviceMng driver init :shm_create: %d ,shm_state: %d.\n" , DriverInfo.TotalInCnt + DriverInfo.TotalOutCnt,
-             DriverInfo.TotalStateCnt);
+    zprintf3("DeviceMng driver init :shm_create: %d ,shm_state: %d.\n" , m_driverInfo.TotalInCnt + m_driverInfo.TotalOutCnt,
+             m_driverInfo.TotalStateCnt);
 
-    if (!pshm->shm_create(DriverInfo.TotalInCnt + DriverInfo.TotalOutCnt, DriverInfo.TotalStateCnt))
+    if (!m_pShm->shm_create(m_driverInfo.TotalInCnt + m_driverInfo.TotalOutCnt, m_driverInfo.TotalStateCnt))
     {
-        zprintf3("DeviceMng driver init :shm_create: %d ,shm_state: %d fail!\n" , DriverInfo.TotalInCnt + DriverInfo.TotalOutCnt,
-                 DriverInfo.TotalStateCnt);
+        zprintf3("DeviceMng driver init :shm_create: %d ,shm_state: %d fail!\n" , m_driverInfo.TotalInCnt + m_driverInfo.TotalOutCnt,
+                 m_driverInfo.TotalStateCnt);
         return false;
     }
     return true;
@@ -49,17 +49,17 @@ bool driver::Init(void)
 
 
 
-bool driver::Msg_GetInfo(void)
+bool driver::msgGetInfo(void)
 {
     sMsgUnit pkt;
 
 
     memset(&pkt, 0, sizeof(sMsgUnit));
     pkt.source.app            = GET_DEVMNG_ID;
-    pkt.dest.driver.id_driver = driver_id;
+    pkt.dest.driver.id_driver = m_driverId;
     pkt.type                  = MSG_TYPE_DriverGetInfo;
 
-    if (pmsg->sendMsg(&pkt, 0) == false)
+    if (m_pSendmsg->sendMsg(&pkt, 0) == false)
     {
         zprintf1("DeviceMng pmsg->SendMsg(&pkt,0) == false!\n");
         return false;
@@ -67,20 +67,20 @@ bool driver::Msg_GetInfo(void)
     return true;
 }
 
-bool driver::Msg_SendHeart(void)
+bool driver::msgSendHeart(void)
 {
     sMsgUnit pkt;
 
     m_heartMark = 1;            //开始发送心跳标志
     memset(&pkt, 0, sizeof(sMsgUnit));
     pkt.source.app            = GET_DEVMNG_ID;
-    pkt.dest.driver.id_driver = driver_id;
+    pkt.dest.driver.id_driver = m_driverId;
     pkt.type                  = MSG_TYPE_DriverSendHeart;
 
 
-    if (pmsg->sendMsg(&pkt, 0) == false)
+    if (m_pSendmsg->sendMsg(&pkt, 0) == false)
     {
-        zprintf1("driver Id%d msg send heart error!\n", driver_id);
+        zprintf1("driver Id%d msg send heart error!\n", m_driverId);
         return false;
     }
 

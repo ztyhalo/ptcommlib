@@ -385,6 +385,8 @@ MsgMngServer::MsgMngServer():m_pInitSem(NULL)
 MsgMngServer::~MsgMngServer()
 {
     zprintf3("MsgMngServer destruct!\n");
+    DELETE(m_pInitSem);
+    m_pMsgMngServ = NULL;
 }
 int  msgmng_drirecv_back(MsgMngServer * pro, const sMsgUnit pkt)
 {
@@ -675,11 +677,11 @@ bool MsgMngServer::waitDriverInfo(driver *pdirv)
     sMsgUnit pkt;
     if(m_recvDriMsg.receive_object(pkt, 0))
     {
-        if (pkt.source.driver.id_driver == pdirv->driver_id)
+        if (pkt.source.driver.id_driver == pdirv->m_driverId)
         {
-            pdirv->DriverInfo.TotalInCnt    = (uint16_t) (((uint16_t) pkt.data[0] << 8) | pkt.data[1]);
-            pdirv->DriverInfo.TotalOutCnt   = (uint16_t) (((uint16_t) pkt.data[2] << 8) | pkt.data[3]);
-            pdirv->DriverInfo.TotalStateCnt = (uint16_t) (((uint16_t) pkt.data[4] << 8) | pkt.data[5]);
+            pdirv->m_driverInfo.TotalInCnt    = (uint16_t) (((uint16_t) pkt.data[0] << 8) | pkt.data[1]);
+            pdirv->m_driverInfo.TotalOutCnt   = (uint16_t) (((uint16_t) pkt.data[2] << 8) | pkt.data[3]);
+            pdirv->m_driverInfo.TotalStateCnt = (uint16_t) (((uint16_t) pkt.data[4] << 8) | pkt.data[5]);
         }
         return true;
 
