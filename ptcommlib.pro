@@ -8,11 +8,13 @@ QT       += core xml network
 
 
 QMAKE_CXXFLAGS += -std=c++11
+
+DEFINES += ZCOMMONLIB
 TOPDIR = $$PWD/../../public/
 include($$TOPDIR/app.pri)
 
 
-INCLUDEPATH = .\
+INCLUDEPATH += .\
               msg\
               ptdriver
 

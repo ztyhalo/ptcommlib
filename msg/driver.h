@@ -61,14 +61,10 @@ class driver
   private:
     QString driver_name;
 
-
-    // bool WaitSem(int time_10ms);
-
-
   public:
     int             driver_id;
     shm*            pshm;
-    msg*            pmsg;
+    MsgSendBase *   pmsg;
     int             m_heartMark;
     sDriverInfoType DriverInfo;
     eComStateType   ComState;

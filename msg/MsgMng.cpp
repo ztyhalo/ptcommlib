@@ -1,39 +1,9 @@
 #include "MsgMng.h"
-#include "candata.h"
+// #include "candata.h"
 #include "zprint.h"
 
 
-MsgSendBase::MsgSendBase()
-{
-    ;
-}
 
-MsgSendBase::~MsgSendBase()
-{
-    zprintf3("MsgSendBase destruct!\n");
-}
-
-bool MsgSendBase::sendMsg(sMsgUnit *pdata, uint16_t size)
-{
-    bool ret;
-    uint8_t temp[sizeof(sMsgUnit)];
-
-    memset(temp,0,sizeof(temp));
-    temp[0] =pdata->source.driver.id_driver;
-    temp[1] =pdata->source.driver.id_parent;
-    temp[2] =pdata->source.driver.id_child;
-    temp[3] =pdata->source.driver.id_point;
-    temp[4] =pdata->dest.driver.id_driver;
-    temp[5] =pdata->dest.driver.id_parent;
-    temp[6] =pdata->dest.driver.id_child;
-    temp[7] =pdata->dest.driver.id_point;
-    temp[8] = (uint8_t)((pdata->type&0xff00)>>8);
-    temp[9] = (uint8_t)(pdata->type&0x00ff);
-    memcpy(&temp[10], pdata->data, size);
-
-    ret = send_object(temp, (int)(size+MSG_UNIT_HEAD_LEN), 1);
-    return ret;
-}
 
 MsgMngBase::MsgMngBase()
 {
@@ -151,7 +121,7 @@ bool MsgMngDriver::Init(int recvkey,int sendkey, PtDriverBase * pdriver)
 }
 
 
-void MsgMngDriver::sem_rec_process(sMsgUnit pkt)
+void MsgMngDriver::msgRecvProcess(sMsgUnit pkt)
 {
     // sMsgUnit   pkt;
     uint16_t   pkt_len;
@@ -201,10 +171,10 @@ void MsgMngDriver::sem_rec_process(sMsgUnit pkt)
             addr = pkt.dest.app;
             pkt.dest.app = pkt.source.app;
             pkt.source.app =addr;
-            can_inode_info ininfo;
+            // can_inode_info ininfo;
             // pdriver->get_innode_info(pkt.source.driver.id_parent, pkt.source.driver.id_child,
             //                          pkt.source.driver.id_point, ininfo);
-            memcpy(pkt.data, &ininfo,sizeof(ininfo));
+            // memcpy(pkt.data, &ininfo,sizeof(ininfo));
             // pSendMsg->SendMsg(&pkt,sizeof(ininfo));
             break;
 
@@ -322,70 +292,70 @@ bool MsgMng::AckWaitMsg( Type_MsgAddr waitid,uint16_t type)
 
 void MsgMng::RecvMsgProcess(void * arg)
 {
-    sMsgUnit   pkt;
-    uint16_t   pkt_len;
-    uint32_t   addr;
-    Can_Data *pdriver = (Can_Data *) arg;
+//     sMsgUnit   pkt;
+//     uint16_t   pkt_len;
+//     uint32_t   addr;
+//     // Can_Data *pdriver = (Can_Data *) arg;
 
-    if(!pRecvMsg->ReceiveMsg(&pkt,&pkt_len,RECV_WAIT))
-    {
-        usleep(10000);
-        return;
-    }
+//     if(!pRecvMsg->ReceiveMsg(&pkt,&pkt_len,RECV_WAIT))
+//     {
+//         usleep(10000);
+//         return;
+//     }
 
-    if((pkt.dest.driver.id_driver != pdriver->devkey.driverid)&&(pkt.dest.app != BROADCAST_ID))
-        return;
+//     if((pkt.dest.driver.id_driver != pdriver->devkey.driverid)&&(pkt.dest.app != BROADCAST_ID))
+//         return;
 
-    switch(pkt.type)
-    {
-        case MSG_TYPE_DriverGetInfo:
-        uint8_t midchang ;
-            soure_id.driver.id_driver = pkt.dest.driver.id_driver;
+//     switch(pkt.type)
+//     {
+//         case MSG_TYPE_DriverGetInfo:
+//         uint8_t midchang ;
+//             soure_id.driver.id_driver = pkt.dest.driver.id_driver;
 
-            dest_id = pkt.source.app;
-            zprintf3("receive dest id is %d\n",dest_id);
-            addr = pkt.dest.app;
-            pkt.dest.app = pkt.source.app;
-            pkt.source.app =addr;
-//            zprintf1("receive driver info id \n\n\n");
+//             dest_id = pkt.source.app;
+//             zprintf3("receive dest id is %d\n",dest_id);
+//             addr = pkt.dest.app;
+//             pkt.dest.app = pkt.source.app;
+//             pkt.source.app =addr;
+// //            zprintf1("receive driver info id \n\n\n");
 
-            memcpy(&pkt.data[0] ,&pdriver->d_info,sizeof(sDriverInfoType));
-            midchang = pkt.data[0];
-            pkt.data[0] = pkt.data[1];
-            pkt.data[1] = midchang;
-            midchang = pkt.data[2];
-            pkt.data[2] = pkt.data[3];
-            pkt.data[3] = midchang;
-            midchang = pkt.data[4];
-            pkt.data[4] = pkt.data[5];
-            pkt.data[5] = midchang;
-            pkt_len = sizeof(sDriverInfoType);
-            pSendMsg->SendMsg(&pkt,pkt_len);
-            break;
+//             memcpy(&pkt.data[0] ,&pdriver->d_info,sizeof(sDriverInfoType));
+//             midchang = pkt.data[0];
+//             pkt.data[0] = pkt.data[1];
+//             pkt.data[1] = midchang;
+//             midchang = pkt.data[2];
+//             pkt.data[2] = pkt.data[3];
+//             pkt.data[3] = midchang;
+//             midchang = pkt.data[4];
+//             pkt.data[4] = pkt.data[5];
+//             pkt.data[5] = midchang;
+//             pkt_len = sizeof(sDriverInfoType);
+//             pSendMsg->SendMsg(&pkt,pkt_len);
+//             break;
 
-        case MSG_TYPE_DriverSendHeart:
+//         case MSG_TYPE_DriverSendHeart:
 
-            addr = pkt.dest.app;
-            pkt.dest.app = pkt.source.app;
-            pkt.source.app =addr;
-            pSendMsg->SendMsg(&pkt,0);
-            break;
+//             addr = pkt.dest.app;
+//             pkt.dest.app = pkt.source.app;
+//             pkt.source.app =addr;
+//             pSendMsg->SendMsg(&pkt,0);
+//             break;
 
-        case MSG_TYPE_AppGetIOParam:
-            addr = pkt.dest.app;
-            pkt.dest.app = pkt.source.app;
-            pkt.source.app =addr;
-            can_inode_info ininfo;
-            pdriver->get_innode_info(pkt.source.driver.id_parent, pkt.source.driver.id_child,
-                                     pkt.source.driver.id_point, ininfo);
-            memcpy(pkt.data, &ininfo,sizeof(ininfo));
-            pSendMsg->SendMsg(&pkt,sizeof(ininfo));
-            break;
+//         case MSG_TYPE_AppGetIOParam:
+//             addr = pkt.dest.app;
+//             pkt.dest.app = pkt.source.app;
+//             pkt.source.app =addr;
+//             can_inode_info ininfo;
+//             pdriver->get_innode_info(pkt.source.driver.id_parent, pkt.source.driver.id_child,
+//                                      pkt.source.driver.id_point, ininfo);
+//             memcpy(pkt.data, &ininfo,sizeof(ininfo));
+//             pSendMsg->SendMsg(&pkt,sizeof(ininfo));
+//             break;
 
 
-        default:
-            break;
-    }
+//         default:
+//             break;
+//     }
     return;
 }
 

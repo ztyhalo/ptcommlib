@@ -7,7 +7,7 @@
 #include <QMap>
 #include <QString>
 #include "driver.h"
-#include "semprocess.h"
+#include "msgprocess.h"
 #include "zprint.h"
 #include "lsystemsem.h"
 #include <QMap>
@@ -31,14 +31,7 @@ typedef QMap< uint32_t, app* >    mAppTable;
 typedef QMap< int,  driver * > mDriverTable;
 
 
-class MsgSendBase :public MsgRevClass<sMsgUnit>
-{
-public:
-    MsgSendBase();
-    virtual ~MsgSendBase();
-    bool sendMsg(sMsgUnit *pdata,   uint16_t size);
-    // bool receiveMsg(sMsgUnit *pdata, uint16_t *psize, int mode);
-};
+
 
 class MsgMngBase :public MsgRevClass<sMsgUnit>
 {
@@ -54,7 +47,7 @@ public:
 class PtDriverBase
 {
 public:
-    int             m_driverId;
+    int              m_driverId;
     sDriverInfoType  m_paramInfo;
 public:
     PtDriverBase():m_driverId(0)
@@ -92,7 +85,7 @@ public:
     }
     ~MsgMngDriver();
     bool Init(int recvkey,int sendkey, PtDriverBase * pdriver);
-    void sem_rec_process(sMsgUnit val) override;
+    void msgRecvProcess(sMsgUnit val) override;
     void msgmng_send_msg(sMsgUnit *pdata, uint16_t size);
 };
 
