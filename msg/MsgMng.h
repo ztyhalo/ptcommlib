@@ -58,7 +58,7 @@ public:
     {
         zprintf3("PtDriverBase destruct!\n");
     }
-    virtual int  get_innode_info(uint devnum, uint innode, pt_inode_info& val) =0;
+    virtual int  get_innode_info(int dev, int child, int innode, void* val) =0;
 
 };
 
@@ -140,34 +140,34 @@ public:
 };
 
 
-class MsgMng
-{
-private:
-    pthread_t RecvMsg_id;
-    msg  *pRecvMsg;
-    msg  *pSendMsg;
-    lWaitList  WaitDriverList;
-    pthread_mutex_t WaitListMutex;
-    int testcycle ;
+// class MsgMng
+// {
+// private:
+//     pthread_t RecvMsg_id;
+//     msg  *pRecvMsg;
+//     msg  *pSendMsg;
+//     lWaitList  WaitDriverList;
+//     pthread_mutex_t WaitListMutex;
+//     int testcycle ;
 
-    MsgMng();
-    bool CheckWaitMsg( Type_MsgAddr waitid,uint16_t type);
-    bool AckWaitMsg( Type_MsgAddr waitid,uint16_t type);
+//     MsgMng();
+//     bool CheckWaitMsg( Type_MsgAddr waitid,uint16_t type);
+//     bool AckWaitMsg( Type_MsgAddr waitid,uint16_t type);
 
-public:
-    Type_MsgAddr soure_id;
-    uint32_t     dest_id;
-public:
-    static MsgMng * GetMsgMng(void)
-    {
-        static MsgMng gMsgMng;
-        return &gMsgMng;
-    }
-    ~MsgMng();
-    bool Init(int recvkey,int sendkey, void * arg=NULL);
-    bool InsertWaitMsg(const Type_MsgAddr &waitid,uint16_t type,sem_t * pack);
-    void RecvMsgProcess(void * arg);
-    void msgmng_send_msg(sMsgUnit *pdata, uint16_t size);
-};
+// public:
+//     Type_MsgAddr soure_id;
+//     uint32_t     dest_id;
+// public:
+//     static MsgMng * GetMsgMng(void)
+//     {
+//         static MsgMng gMsgMng;
+//         return &gMsgMng;
+//     }
+//     ~MsgMng();
+//     bool Init(int recvkey,int sendkey, void * arg=NULL);
+//     bool InsertWaitMsg(const Type_MsgAddr &waitid,uint16_t type,sem_t * pack);
+//     void RecvMsgProcess(void * arg);
+//     void msgmng_send_msg(sMsgUnit *pdata, uint16_t size);
+// };
 
 #endif // MSGMNG_H
