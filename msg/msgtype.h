@@ -1,10 +1,12 @@
 #ifndef MSGTYPE_H
 #define MSGTYPE_H
 
-// #include "define.h"
-#include "MsgObject.h"
-#include <unistd.h>
 
+#include <unistd.h>
+#include <sys/msg.h>
+#include <QDebug>
+
+#define MSG_OBJECT_LENGTH  1024
 #define MSG_UNIT_LENGTH MSG_OBJECT_LENGTH
 #define MSG_UNIT_HEAD_LEN    10
 

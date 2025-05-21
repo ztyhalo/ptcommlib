@@ -119,6 +119,7 @@ public:
     void startRecvAppMsgProcess(void);
     bool isAppMapExist(uint32_t id);
     int  operateAppMsgKey(eOperateKeyType mode, int key);
+    bool isProcessExists(qint64 pid);
 
     // bool InsertWaitMsg(Type_MsgAddr& waitid, uint16_t type, sem_t* pack);
     // void DriverMsgProcess(void);
@@ -132,9 +133,10 @@ class MsgMngApp
   public:
     mDriverTable                            m_driverTable;
     mAppTable                               m_appTable;
-    // MsgRevBackClass<sMsgUnit, MsgMngApp>    m_recvDriMsg;
+
     LSystemSem*                             m_pInitSem;
-    MsgRevBackClass<sMsgUnit, MsgMngApp>    m_recvServMsg;
+    MsgRevBackClass<sMsgUnit, MsgMngApp>    m_recvServMsg;   //通用注册消息，通过此消息接收m_appRecvMsg的key值
+    MsgRevBackClass<sMsgUnit, MsgMngApp>    m_appRecvMsg;     //服务器创建的消息，app接收消息key
     MsgSendBase                             m_sendToServMsg;
 
     int                                     m_loginOkFlag;
@@ -159,7 +161,7 @@ class MsgMngApp
     bool initSendMail(int sendkey, int totalkey, int totalmutexkey);
     bool loginRecvMail(void);
     bool waitServerInfo(sMsgUnit & pkt);
-    // bool InitRecvMail(void);
+    bool initRecvMail(void);
     // bool InitGetInfo(int driver_id, uint32_t timeout_ms);
     // bool MsgSendProcess(Type_MsgAddr& addr, uint16_t msgtype, ackfunctype func, uint8_t* pdata, uint16_t len);
     // void SetIsRecv(bool isRecv);

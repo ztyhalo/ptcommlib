@@ -4,12 +4,12 @@
 
 DeviceMng::DeviceMng()
 {
-    SysMinKey   = 0;
-    SysMaxKey   = 0;
-    AppStartKey = SysMaxKey + 1;
+    // SysMinKey   = 0;
+    // SysMaxKey   = 0;
+    // AppStartKey = SysMaxKey + 1;
     CfgList.clear();
     // DriverTable.clear();
-    AppUseKeyList.clear();
+    // AppUseKeyList.clear();
     InitFinishFlag = false;
     m_pMsgMngServer = MsgMngServer::GetMsgMngServer();
 }
@@ -27,7 +27,7 @@ DeviceMng::~DeviceMng()
     // }
     // CfgList.clear();
     // DriverTable.clear();
-    AppUseKeyList.clear();
+    // AppUseKeyList.clear();
     CfgList.clear();
     DELETE(m_pMsgMngServer);
 }
@@ -92,46 +92,46 @@ void DeviceMng::loadShareParam(const QString filePath)
 
     settings.beginGroup("MEMERY_PARAM");
     value     = QString("SYS_KEY_RESERVE");
-    SysResKey = settings.value(value).toInt();
+    m_pMsgMngServer->m_sysResMsgKey = settings.value(value).toInt();
     value     = QString("SYS_KEY_MIN");
-    SysMinKey = settings.value(value).toInt();
+    m_pMsgMngServer->m_sysMinMsgKey = settings.value(value).toInt();
     value     = QString("SYS_KEY_MAX");
-    SysMaxKey = settings.value(value).toInt();
+    m_pMsgMngServer->m_sysMaxMsgKey = settings.value(value).toInt();
     settings.endGroup();
     settings.deleteLater();
 }
 
-int DeviceMng::OperateAppMsgKey(eOperateKeyType mode, int key)
-{
-    int remain = SysMaxKey - AppStartKey + 1 - AppUseKeyList.size();
-    if (mode == KEY_ADD)
-    {
-        if (remain <= 0)
-            return 0;
-        for (int i = AppStartKey; i < SysMaxKey; i++)
-        {
-            if (!AppUseKeyList.contains(i))
-            {
-                AppUseKeyList.append(i);
-                return i;
-            }
-        }
-    }
-    else if (mode == KEY_SUB)
-    {
-        if (AppUseKeyList.size() == 0)
-            return 0;
-        for (int i = 0; i < AppUseKeyList.size(); i++)
-        {
-            if (AppUseKeyList.at(i) == key)
-            {
-                AppUseKeyList.removeAt(i);
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
+// int DeviceMng::OperateAppMsgKey(eOperateKeyType mode, int key)
+// {
+//     int remain = SysMaxKey - AppStartKey + 1 - AppUseKeyList.size();
+//     if (mode == KEY_ADD)
+//     {
+//         if (remain <= 0)
+//             return 0;
+//         for (int i = AppStartKey; i < SysMaxKey; i++)
+//         {
+//             if (!AppUseKeyList.contains(i))
+//             {
+//                 AppUseKeyList.append(i);
+//                 return i;
+//             }
+//         }
+//     }
+//     else if (mode == KEY_SUB)
+//     {
+//         if (AppUseKeyList.size() == 0)
+//             return 0;
+//         for (int i = 0; i < AppUseKeyList.size(); i++)
+//         {
+//             if (AppUseKeyList.at(i) == key)
+//             {
+//                 AppUseKeyList.removeAt(i);
+//                 return 1;
+//             }
+//         }
+//     }
+//     return 0;
+// }
 
 bool DeviceMng::CheckParamValidity(void)
 {
@@ -147,32 +147,32 @@ bool DeviceMng::CheckParamValidity(void)
         }
     }
 
-    if (SysMaxKey < SysMinKey)
+    if (m_pMsgMngServer->m_sysMaxMsgKey < m_pMsgMngServer->m_sysMinMsgKey)
     {
         zprintf1("DeviceMng SysMaxKey < SysMinKey!\n");
         return false;
     }
 
-    AppUseKeyList.clear();
-    if ((SysMaxKey - SysMinKey + 1) <= (DRIVER_SHARE_KEY_NUM * CfgList.size() + DEVICEMNG_SHARE_KEY_NUM))
+    // AppUseKeyList.clear();
+    if ((m_pMsgMngServer->m_sysMaxMsgKey - m_pMsgMngServer->m_sysMinMsgKey + 1) <= (DRIVER_SHARE_KEY_NUM * CfgList.size() + DEVICEMNG_SHARE_KEY_NUM))
     {
-       zprintf1("DeviceMng SysKey num fail,SysMaxKey: %d SysMinKey: %d CfgList.size() %d!\n",SysMaxKey ,SysMinKey
-                                                       , CfgList.size());
+       zprintf1("DeviceMng SysKey num fail,SysMaxKey: %d SysMinKey: %d CfgList.size() %d!\n",m_pMsgMngServer->m_sysMaxMsgKey ,
+                m_pMsgMngServer->m_sysMinMsgKey , CfgList.size());
         return false;
     }
 
-    AppStartKey = SysMinKey + DRIVER_SHARE_KEY_NUM * CfgList.size() + DEVICEMNG_SHARE_KEY_NUM;
+    m_pMsgMngServer->m_appStMsgKey = m_pMsgMngServer->m_sysMinMsgKey + DRIVER_SHARE_KEY_NUM * CfgList.size() + DEVICEMNG_SHARE_KEY_NUM;
     return true;
 }
 
 int DeviceMng::GetDeviceMngKey(void)
 {
-    return SysMinKey;
+    return m_pMsgMngServer->m_sysMinMsgKey;
 }
 
 int DeviceMng::GetDeviceMngResKey(void)
 {
-    return SysResKey;
+    return m_pMsgMngServer->m_sysResMsgKey;
 }
 
 void DeviceMng::ShellSetupDriver(sDeviceCfg& cfg, int key, int drivermsgkey)
@@ -200,11 +200,11 @@ bool DeviceMng::SetupDriver(void)
     driver*    pdriver;
     int        keytemp;
     sDeviceCfg cfg;
-    int        usekey = SysMinKey + DEVICEMNG_SHARE_KEY_NUM;
+    int        usekey = m_pMsgMngServer->m_sysMinMsgKey + DEVICEMNG_SHARE_KEY_NUM;
     MsgMngServer*  pMsgMngServer = MsgMngServer::GetMsgMngServer();
     struct timeval tv;
 
-    keytemp = SysMinKey + DEVICEMNG_SHARE_KEY_NUM;
+    keytemp = m_pMsgMngServer->m_sysMinMsgKey + DEVICEMNG_SHARE_KEY_NUM;
 
     for (int i = 0; i < CfgList.size(); i++)
     {
@@ -221,7 +221,7 @@ bool DeviceMng::SetupDriver(void)
 
         cfg.script = CfgList.at(i).script;
         ShellSetupDriver(
-            cfg, SysMinKey + DEVICEMNG_SHARE_KEY_NUM + DRIVER_SHARE_KEY_NUM * i, SysMinKey + 1);
+            cfg, m_pMsgMngServer->m_sysMinMsgKey + DEVICEMNG_SHARE_KEY_NUM + DRIVER_SHARE_KEY_NUM * i, m_pMsgMngServer->m_sysMinMsgKey + 1);
         usekey += DRIVER_SHARE_KEY_NUM;
 
         if(!pdriver->msgGetInfo())
@@ -243,7 +243,7 @@ bool DeviceMng::SetupDriver(void)
             return false;
         }
     }
-    AppStartKey = usekey;
+    m_pMsgMngServer->m_appStMsgKey = usekey;
 
     gettimeofday(&tv, NULL);
     zprintf3("DeviceMng device SetupDriver end time: %d.\n" ,tv.tv_sec);

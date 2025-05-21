@@ -23,7 +23,6 @@ INCLUDEPATH += .\
 SOURCES += \
     msg/DeviceMng.cpp \
     msg/MsgMng.cpp \
-    msg/MsgObject.cpp \
     msg/app.cpp \
     msg/driver.cpp \
     msg/msg.cpp \
@@ -34,7 +33,6 @@ SOURCES += \
 HEADERS += \
     msg/DeviceMng.h \
     msg/MsgMng.h \
-    msg/MsgObject.h \
     msg/app.h \
     msg/define.h \
     msg/driver.h \

@@ -33,11 +33,11 @@ class DeviceMng
   private:
     lCfgType     CfgList;
     // mDriverTable DriverTable;
-    int          SysResKey;
-    int          SysMinKey;
-    int          SysMaxKey;
-    int          AppStartKey;
-    QList< int > AppUseKeyList;
+    // int          SysResKey;
+    // int          SysMinKey;
+    // int          SysMaxKey;
+    // int          AppStartKey;
+    // QList< int > AppUseKeyList;
 
     DeviceMng();
     void ShellSetupDriver(sDeviceCfg& cfg, int key, int drivermsgkey);
@@ -51,7 +51,7 @@ class DeviceMng
     ~DeviceMng();
     void loadCfgFile(const QString filePath);
     void loadShareParam(const QString filePath);
-    int  OperateAppMsgKey(eOperateKeyType mode, int key);
+    // int  OperateAppMsgKey(eOperateKeyType mode, int key);
 
     bool CheckParamValidity(void);
     int  GetDeviceMngKey(void);
