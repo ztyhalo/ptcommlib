@@ -36,17 +36,17 @@ typedef struct
 //     bool receive_object(void *pdata,int *psize,int mode);
 //     int GetMsgKey(void);
 // };
-class MsgObject:public Z_Msg<char [MSG_OBJECT_LENGTH]>
-{
-public:
-    explicit MsgObject(int key):Z_Msg(key)
-    {
-        ;
-    }
-    ~MsgObject()
-    {
-        ;
-    }
-};
+// class MsgObject:public Z_Msg<char [MSG_OBJECT_LENGTH]>
+// {
+// public:
+//     explicit MsgObject(int key):Z_Msg(key)
+//     {
+//         ;
+//     }
+//     ~MsgObject()
+//     {
+//         ;
+//     }
+// };
 
 #endif // MSGOBJECT_H

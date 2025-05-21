@@ -1,5 +1,6 @@
 #include "shm.h"
 
+
 shm::shm(int inkey, int outkey, int outsem, int statekey):data_key(inkey),ctrl_key(outkey),
       ctrl_semkey(outsem),state_key(statekey),data_cnt(0),m_pDataShm(NULL),m_pCtrlShm(NULL),
       m_pStateShm(NULL)
@@ -98,7 +99,7 @@ bool shm::shm_init(void)
     zprintf3("DeviceMng shm_init data_cnt: %d.\n" , data_cnt);
     for (int i = 0; i < data_cnt; i++)
     {
-        if (!(m_pDataShm->get_data(i, temp)))
+        if (m_pDataShm->get_data(i, temp) != 0)
         {
             zprintf1("DeviceMng shm_init fail!\n");
             return false;

@@ -5,7 +5,7 @@
 #include <semaphore.h>
 #include "shm.h"
 #include "msg.h"
-#include <time.h>
+// #include <time.h>
 
 typedef struct
 {
@@ -48,6 +48,24 @@ struct pt_inode_info
     uint8_t  notify_time_interval;
     uint8_t  notify_en;
     uint8_t  notify_range;
+};
+
+class PtDriverBase:public Key_Info
+{
+  public:
+    int              m_driverId;
+    sDriverInfoType  m_paramInfo;
+  public:
+    PtDriverBase():m_driverId(0)
+    {
+        memset(&m_paramInfo, 0x00, sizeof(m_paramInfo));
+    }
+    virtual ~PtDriverBase()
+    {
+        zprintf3("PtDriverBase destruct!\n");
+    }
+    virtual int  get_innode_info(int dev, int child, int innode, void* val) =0;
+
 };
 
 typedef enum

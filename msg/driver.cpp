@@ -58,7 +58,7 @@ bool driver::msgGetInfo(void)
     pkt.source.app            = GET_DEVMNG_ID;
     pkt.dest.driver.id_driver = m_driverId;
     pkt.type                  = MSG_TYPE_DriverGetInfo;
-
+    zprintf1("send get info!\n");
     if (m_pSendmsg->sendMsg(&pkt, 0) == false)
     {
         zprintf1("DeviceMng pmsg->SendMsg(&pkt,0) == false!\n");
@@ -77,7 +77,7 @@ bool driver::msgSendHeart(void)
     pkt.dest.driver.id_driver = m_driverId;
     pkt.type                  = MSG_TYPE_DriverSendHeart;
 
-
+    zprintf3("send haeart driver %d!\n", m_driverId);
     if (m_pSendmsg->sendMsg(&pkt, 0) == false)
     {
         zprintf1("driver Id%d msg send heart error!\n", m_driverId);

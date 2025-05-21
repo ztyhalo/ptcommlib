@@ -1,8 +1,8 @@
 #ifndef SHM_H
 #define SHM_H
 
-#include "define.h"
 
+#include "define.h"
 #include "qtsharemem.h"
 #include "qtsemshare.h"
 #include "ptdriver/ptdrivercommon.h"

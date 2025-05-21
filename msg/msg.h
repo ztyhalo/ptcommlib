@@ -5,18 +5,18 @@
 #include "msgtype.h"
 #include "msgprocess.h"
 
-class msg:public MsgObject
-{
-public:
-    explicit msg(int key):MsgObject(key)
-    {
+// class msg:public MsgObject
+// {
+// public:
+//     explicit msg(int key):MsgObject(key)
+//     {
 
-    }
-    ~msg();
+//     }
+//     ~msg();
 
-    bool SendMsg(sMsgUnit *pdata,uint16_t size);
-    bool ReceiveMsg(sMsgUnit *pdata,uint16_t *psize,int mode);
-};
+//     bool SendMsg(sMsgUnit *pdata,uint16_t size);
+//     bool ReceiveMsg(sMsgUnit *pdata,uint16_t *psize,int mode);
+// };
 
 
 class MsgSendBase :public MsgSendClass<sMsgUnit>

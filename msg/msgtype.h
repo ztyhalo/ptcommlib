@@ -8,7 +8,8 @@
 #define MSG_UNIT_LENGTH MSG_OBJECT_LENGTH
 #define MSG_UNIT_HEAD_LEN    10
 
-#define GET_DEVMNG_ID  ((unsigned int)getpid())
+#define GET_DEVMNG_ID   ((unsigned int)getpid())
+#define GET_APP_ID      ((unsigned int) getpid())
 #define BROADCAST_ID     0
 
 typedef union

@@ -191,7 +191,7 @@ void DeviceMng::ShellSetupDriver(sDeviceCfg& cfg, int key, int drivermsgkey)
                               .arg(drivermsgkey)
                               .arg(cfg.id)
                               .arg(key + 4);
-    zprintf3("DeviceMng ShellSetupDriver : %s!\n" , script.toStdString().c_str());
+    zprintf1("DeviceMng ShellSetupDriver : %s!\n" , script.toStdString().c_str());
     system(script.toLatin1().data());
 }
 
@@ -202,12 +202,12 @@ bool DeviceMng::SetupDriver(void)
     sDeviceCfg cfg;
     int        usekey = SysMinKey + DEVICEMNG_SHARE_KEY_NUM;
     MsgMngServer*  pMsgMngServer = MsgMngServer::GetMsgMngServer();
+    struct timeval tv;
 
     keytemp = SysMinKey + DEVICEMNG_SHARE_KEY_NUM;
 
     for (int i = 0; i < CfgList.size(); i++)
     {
-        struct timeval tv;
         gettimeofday(&tv, NULL);
         keytemp += DRIVER_SHARE_KEY_NUM * i;
 
@@ -221,7 +221,7 @@ bool DeviceMng::SetupDriver(void)
 
         cfg.script = CfgList.at(i).script;
         ShellSetupDriver(
-            cfg, SysMinKey + DEVICEMNG_SHARE_KEY_NUM + DRIVER_SHARE_KEY_NUM * (CfgList.at(i).id - 1), SysMinKey + 1);
+            cfg, SysMinKey + DEVICEMNG_SHARE_KEY_NUM + DRIVER_SHARE_KEY_NUM * i, SysMinKey + 1);
         usekey += DRIVER_SHARE_KEY_NUM;
 
         if(!pdriver->msgGetInfo())
@@ -230,7 +230,7 @@ bool DeviceMng::SetupDriver(void)
             return false;
         }
 
-        if(pMsgMngServer->waitDriverInfo(pdriver))
+        if(!pMsgMngServer->waitDriverInfo(pdriver))
         {
             zprintf1("DeviceMng device[%d] waitDriverInfo error!\n", cfg.id);
         }
@@ -238,7 +238,6 @@ bool DeviceMng::SetupDriver(void)
 
         if (!pdriver->init())
         {
-            struct timeval tv;
             gettimeofday(&tv, NULL);
             zprintf1("DeviceMng device[%d] Initmem error time: %d!\n", cfg.id , tv.tv_sec);
             return false;
@@ -246,11 +245,11 @@ bool DeviceMng::SetupDriver(void)
     }
     AppStartKey = usekey;
 
-    {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        zprintf3("DeviceMng device SetupDriver end time: %d.\n" ,tv.tv_sec);
-    }
+    gettimeofday(&tv, NULL);
+    zprintf3("DeviceMng device SetupDriver end time: %d.\n" ,tv.tv_sec);
+
+    pMsgMngServer->startRecvDrivMsgProcess();
+    // m_recvAppMsg.z_pthread_init(msgmng_apprecv_back, this, "msgservapprecv");
     return true;
 }
 
@@ -281,7 +280,7 @@ void DeviceMng::DriverHeartMng(void)
                 item.value()->m_comState = COMSTATE_ABNORMAL;
                 data                   = (uint8_t) item.key();
                 // m_pMsgMngServer->BroadcastToApp(MSG_TYPE_AppReportDriverComAbnormal, &data, 1);
-                zprintf1("DeviceMng report driver com abnormal**!\n");
+                zprintf1("DeviceMng report driver%d com abnormal!\n", item.value()->m_driverId);
             }
 
         }
@@ -292,7 +291,7 @@ void DeviceMng::DriverHeartMng(void)
                 item.value()->m_comState = COMSTATE_NORMAL;
                 data                   = (uint8_t) item.key();
                 // pMsgMng->BroadcastToApp(MSG_TYPE_AppReportDriverComNormal, &data, 1);
-                //qDebug() << "DeviceMng report driver com normal";
+                zprintf1("DeviceMng report driver%d com normal.\n", item.value()->m_driverId);
             }
 
         }

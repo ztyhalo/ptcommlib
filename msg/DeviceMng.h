@@ -17,14 +17,7 @@
 #define CFGINI_FILE_PATH "/opt/config/devicemng/devicemng.ini"
 #endif
 
-#define DEVICEMNG_SHARE_KEY_NUM 4 // 消息占用4个key
-#define DRIVER_SHARE_KEY_NUM    5 // 每个驱动占用5个key
 
-typedef enum
-{
-    KEY_ADD = 0,
-    KEY_SUB
-} eOperateKeyType;
 
 typedef struct
 {
@@ -55,15 +48,11 @@ class DeviceMng
     static DeviceMng* pDeviceCmd;
 
     static DeviceMng* GetDeviceMng(void);
-    //    {
-    //        static DeviceMng gDeviceMng;
-    //        return &gDeviceMng;
-    //    }
     ~DeviceMng();
     void loadCfgFile(const QString filePath);
     void loadShareParam(const QString filePath);
     int  OperateAppMsgKey(eOperateKeyType mode, int key);
-    // bool FindDriver(uint8_t id, driver** ppdriver);
+
     bool CheckParamValidity(void);
     int  GetDeviceMngKey(void);
     int  GetDeviceMngResKey(void);

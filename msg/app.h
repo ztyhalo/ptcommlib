@@ -7,15 +7,17 @@
 class app
 {
   private:
-    uint32_t app_id;
+    uint32_t m_appId;
 
   public:
-    msg* pmsg;
-    bool isRecv;
+    // msg* m_pMsg;
+    int             m_key;
+    MsgSendBase *   m_pMsg;
+    bool            m_isRecv;
 
     app(uint32_t id, int msgkey, bool isRecvIn);
     ~app();
-    bool Init(void);
+    bool init(void);
 };
 
 #endif // APP_H
