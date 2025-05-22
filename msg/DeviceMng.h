@@ -28,37 +28,69 @@ typedef struct
 typedef QList< sDeviceCfg>  lCfgType;
 // typedef QMap< int, driver * > mDriverTable;
 
-class DeviceMng
-{
-  private:
-    lCfgType     CfgList;
-    // mDriverTable DriverTable;
-    // int          SysResKey;
-    // int          SysMinKey;
-    // int          SysMaxKey;
-    // int          AppStartKey;
-    // QList< int > AppUseKeyList;
 
-    DeviceMng();
-    void ShellSetupDriver(sDeviceCfg& cfg, int key, int drivermsgkey);
+class DeviceMngBase
+{
+  public:
+    lCfgType     CfgList;
 
   public:
-    bool              InitFinishFlag;
-    MsgMngServer *    m_pMsgMngServer;
-    static DeviceMng* pDeviceCmd;
-
-    static DeviceMng* GetDeviceMng(void);
-    ~DeviceMng();
-    void loadCfgFile(const QString filePath);
-    void loadShareParam(const QString filePath);
-    // int  OperateAppMsgKey(eOperateKeyType mode, int key);
+    bool              m_initOk;
+    MsgKeyClass *     m_pKey;
+    DeviceMngBase();
+    ~DeviceMngBase();
+    void deviceMngBaseInit(MsgKeyClass * key);
+    void loadCfgFile(const QString & filePath);
+    void loadShareParam(const QString & filePath);
 
     bool CheckParamValidity(void);
     int  GetDeviceMngKey(void);
     int  GetDeviceMngResKey(void);
+};
+
+class DeviceMng:public DeviceMngBase
+{
+  private:
+    DeviceMng();
+    void ShellSetupDriver(sDeviceCfg& cfg, int key, int drivermsgkey);
+
+  public:
+
+    MsgMngServer *    m_pMngServ;
+
+    static DeviceMng* pDeviceCmd;
+
+    static DeviceMng* GetDeviceMng(void);
+    ~DeviceMng();
+
     bool SetupDriver(void);
     void SendHeartToDriver(void);
     void DriverHeartMng(void);
+
 };
+
+
+class DeviceMngApp:public DeviceMngBase
+{
+  private:
+    DeviceMngApp();
+
+
+  public:
+
+    MsgMngApp *    m_pMngApp;
+
+    static DeviceMngApp* pAppCmd;
+
+    static DeviceMngApp* getDeviceMngApp(void);
+    ~DeviceMngApp();
+    int  initApp(void);
+    bool setupDriver(uint32_t timeout);
+    uint32_t getAppid(uint8_t DriverID, uint8_t ParentDeviceID, uint8_t ChildDeviceID, uint8_t PointID, uint8_t type);
+    void changeAppid(uint32_t appid, uint8_t* DriverID, uint8_t* ParentDeviceID, uint8_t* ChildDeviceID,
+            uint8_t* PointID, uint8_t* type);
+
+};
+
 
 #endif // DEVICEMNG_H

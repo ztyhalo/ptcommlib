@@ -23,6 +23,66 @@ bool MsgMngBase::sendMsg(sMsgUnit *pdata, uint16_t size)
 }
 
 
+MsgKeyClass::MsgKeyClass():m_resMsgKey(0),m_minMsgKey(0),m_maxMsgKey(0),m_appMsgKey(0)
+{
+    ;
+}
+MsgKeyClass::~MsgKeyClass()
+{
+    zprintf3("MsgKeyClass destruct!\n");
+}
+
+int  MsgKeyClass::operateAppMsgKey(eOperateKeyType mode, int key)
+{
+    int remain = m_maxMsgKey - m_appMsgKey + 1 - m_appUseKeyList.size();
+    if (mode == KEY_ADD)
+    {
+        if (remain <= 0)
+            return 0;
+        for (int i = m_appMsgKey; i < m_maxMsgKey; i++)
+        {
+            if (!m_appUseKeyList.contains(i))
+            {
+                m_appUseKeyList.append(i);
+                return i;
+            }
+        }
+    }
+    else if (mode == KEY_SUB)
+    {
+        if (m_appUseKeyList.size() == 0)
+            return 0;
+        for (int i = 0; i < m_appUseKeyList.size(); i++)
+        {
+            if (m_appUseKeyList.at(i) == key)
+            {
+                m_appUseKeyList.removeAt(i);
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+bool  MsgKeyClass::keyCheckInit(int size)
+{
+    if (m_maxMsgKey < m_minMsgKey)
+    {
+        zprintf1("DeviceMng SysMaxKey < SysMinKey!\n");
+        return false;
+    }
+
+    if ((m_maxMsgKey - m_minMsgKey + 1) <= (DRIVER_SHARE_KEY_NUM * size + DEVICEMNG_SHARE_KEY_NUM))
+    {
+        zprintf1("DeviceMng SysKey num fail,SysMaxKey: %d SysMinKey: %d CfgList.size() %d!\n",m_maxMsgKey ,
+            m_minMsgKey , size);
+        return false;
+    }
+
+    m_appMsgKey = m_minMsgKey + DRIVER_SHARE_KEY_NUM * size + DEVICEMNG_SHARE_KEY_NUM;
+    return true;
+
+}
 
 /*************************************************************************************
  * MsgMngDriver 驱动消息管理类
@@ -75,7 +135,7 @@ bool MsgMngDriver::Init(int recvkey,int sendkey, PtDriverBase * pdriver)
 }
 
 
-void MsgMngDriver::msgRecvProcess(sMsgUnit pkt)
+void MsgMngDriver::msgRecvProcess(sMsgUnit pkt, int len)
 {
     // sMsgUnit   pkt;
     uint16_t   pkt_len;
@@ -173,16 +233,25 @@ MsgMngServer::~MsgMngServer()
     DELETE(m_pInitSem);
     m_pMsgMngServ = NULL;
 }
-int  msgmng_drirecv_back(MsgMngServer * pro, const sMsgUnit pkt)
+int  msgmng_recv_driv_back(MsgMngServer * pro, sMsgUnit pkt, int len)
 {
     driver * pdriver;
     if (pkt.dest.app == GET_DEVMNG_ID)
     {
         switch (pkt.type)
         {
-        case MSG_TYPE_DriverGetInfo:
+            case MSG_TYPE_DriverGetInfo:
+                // if (!CheckWaitMsg(pkt.source, pkt.type))
+                //     break;
 
-            break;
+                // if (pro->findDriver(pkt.source.driver.id_driver, &pdriver))
+                // {
+                //     pdriver->m_driverInfo.TotalInCnt    = (uint16_t) (((uint16_t) pkt.data[0] << 8) | pkt.data[1]);
+                //     pdriver->m_driverInfo.TotalOutCnt   = (uint16_t) (((uint16_t) pkt.data[2] << 8) | pkt.data[3]);
+                //     pdriver->m_driverInfo.TotalStateCnt = (uint16_t) (((uint16_t) pkt.data[4] << 8) | pkt.data[5]);
+                //     // AckWaitMsg(pkt.source, pkt.type);
+                // }
+                break;
 
         case MSG_TYPE_DriverSendHeart:
 
@@ -198,37 +267,34 @@ int  msgmng_drirecv_back(MsgMngServer * pro, const sMsgUnit pkt)
     else if (pkt.dest.app == BROADCAST_ID)
     {
         // sysLogQD() << "+++++++++++++++++++++++++++pkt.dest.app == BROADCAST_ID";
-        // mAppTable::iterator item;
+        mAppTable::iterator item;
 
-        // for (item = AppTable.begin(); item != AppTable.end(); ++item)
-        // {
-        //     pkt.dest.app = item.key();
-        //     item.value()->pmsg->SendMsg(&pkt, pkt_len);
-        // }
+        for (item = pro->m_appTable.begin(); item != pro->m_appTable.end(); ++item)
+        {
+            pkt.dest.app = item.key();
+            item.value()->m_pMsg->sendMsg(&pkt, len);
+        }
     }
     else
     {
 
-        // mAppTable::iterator item;
-        // for (item = AppTable.begin(); item != AppTable.end(); ++item)
-        // {
-        //     if (item.value()->isRecv)
-        //     {
-        //         pkt.dest.app = item.key();
-        //         item.value()->pmsg->SendMsg(&pkt, pkt_len);
-        //     }
-        // }
+        mAppTable::iterator item;
+        for (item = pro->m_appTable.begin(); item != pro->m_appTable.end(); ++item)
+        {
+            if (item.value()->m_isRecv)
+            {
+                pkt.dest.app = item.key();
+                item.value()->m_pMsg->sendMsg(&pkt, len);
+            }
+        }
     }
     return 0;
 }
 
-int  msgmng_apprecv_back(MsgMngServer * pro,  sMsgUnit pkt)
+int  msgmng_recv_app_back(MsgMngServer * pro,  sMsgUnit pkt, int len)
 {
-
-    // sMsgUnit pkt;
-    uint16_t pkt_len;
     app*     papp;
-    driver*  pdriver;
+    driver * pdriver;
     int      key;
 
     // if (!pAppMsg->ReceiveMsg(&pkt, &pkt_len, RECV_NOWAIT))
@@ -341,22 +407,22 @@ int  msgmng_apprecv_back(MsgMngServer * pro,  sMsgUnit pkt)
 
     default:
         zprintf3("DeviceMng default enter!\n");
-        // DeviceMng* pdevice = DeviceMng::GetDeviceMng();
-        // if (!pro->findApp(pkt.source.app, &papp))
-        //     break;
 
-        // if (!pdevice->FindDriver(pkt.dest.driver.id_driver, &pdriver))
-        // {
-        //     pkt.dest.app   = pkt.source.app;
-        //     pkt.source.app = GET_DEVMNG_ID;
-        //     pkt.data[0]    = MSG_ERROR_Driver_NotExist;
-        //     papp->pmsg->SendMsg(&pkt, ABNORMAL_MSG_LEN);
-        // }
-        // else
-        // {
-        //     pdriver->pmsg->SendMsg(&pkt, pkt_len);
-        // }
-        // break;
+        if (!pro->findApp(pkt.source.app, &papp))
+            break;
+
+        if (!pro->findDriver(pkt.dest.driver.id_driver, &pdriver))
+        {
+            pkt.dest.app   = pkt.source.app;
+            pkt.source.app = GET_DEVMNG_ID;
+            pkt.data[0]    = MSG_ERROR_Driver_NotExist;
+            papp->m_pMsg->sendMsg(&pkt, ABNORMAL_MSG_LEN);
+        }
+        else
+        {
+            pdriver->m_pSendmsg->sendMsg(&pkt, len);
+        }
+        break;
     }
     return 0;
 }
@@ -409,37 +475,6 @@ bool MsgMngServer::init(int appkey, int driverkey, int totalkey, int initsemkey,
     return true;
 }
 
-int MsgMngServer::operateAppMsgKey(eOperateKeyType mode, int key)
-{
-    int remain = m_sysMaxMsgKey - m_appStMsgKey + 1 - m_appUseKeyList.size();
-    if (mode == KEY_ADD)
-    {
-        if (remain <= 0)
-            return 0;
-        for (int i = m_appStMsgKey; i < m_sysMaxMsgKey; i++)
-        {
-            if (!m_appUseKeyList.contains(i))
-            {
-                m_appUseKeyList.append(i);
-                return i;
-            }
-        }
-    }
-    else if (mode == KEY_SUB)
-    {
-        if (m_appUseKeyList.size() == 0)
-            return 0;
-        for (int i = 0; i < m_appUseKeyList.size(); i++)
-        {
-            if (m_appUseKeyList.at(i) == key)
-            {
-                m_appUseKeyList.removeAt(i);
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
 
 bool MsgMngServer::isProcessExists(qint64 pid)
 {
@@ -455,12 +490,14 @@ bool MsgMngServer::isProcessExists(qint64 pid)
 
 void MsgMngServer::startRecvDrivMsgProcess(void)
 {
-     m_recvDriMsg.z_pthread_init(msgmng_drirecv_back, this, "msgservdrirecv");
+    m_recvDriMsg.set_z_callback(msgmng_recv_driv_back, this);
+    m_recvDriMsg.start("msgservdrirecv");
 }
 
 void MsgMngServer::startRecvAppMsgProcess(void)
 {
-    m_recvAppMsg.z_pthread_init(msgmng_apprecv_back, this, "msgservapprecv");
+    m_recvAppMsg.set_z_callback(msgmng_recv_app_back, this);
+    m_recvAppMsg.start("msgServAppRecv");
 }
 
 bool MsgMngServer::findApp(uint32_t id, app** ppapp)
@@ -543,11 +580,26 @@ bool MsgMngServer::waitDriverInfo(driver *pdirv)
     return false;
 
 }
+
 /*-----------------------------------------------------------------------------------------------------------------------------*/
 //MsgMngApp类
+/*-----------------------------------------------------------------------------------------------------------------------------*/
+
+MsgMngApp* MsgMngApp::m_pMsgMngApp = NULL;
+MsgMngApp* MsgMngApp::getMsgMngApp()
+{
+    if (m_pMsgMngApp == NULL)
+    {
+        m_pMsgMngApp = new MsgMngApp();
+    }
+    return m_pMsgMngApp;
+}
+
 MsgMngApp::MsgMngApp()
 {
     m_deviceMngId = BROADCAST_ID;
+    sem_init(&m_notifySem, 0, 0);
+
 }
 
 MsgMngApp::~MsgMngApp()
@@ -622,6 +674,51 @@ bool MsgMngApp::waitServerInfo(sMsgUnit & pkt)
 
 }
 
+bool MsgMngApp::findDriver(uint8_t id, driver** ppdriver)
+{
+    mDriverTable::iterator item;
+
+    item = m_driverTable.find(id);
+    if ((item != m_driverTable.end()) && (item.key() == id))
+    {
+        *ppdriver = item.value();
+        return true;
+    }
+    *ppdriver = (driver*) 0;
+    return false;
+}
+
+bool MsgMngApp::waitDriverInfo(sMsgUnit & pkt)
+{
+    // sMsgUnit pkt;
+    int len;
+    driver*     pdriver;
+    while(m_appRecvMsg.receive_object(pkt, 0, len))
+    {
+        zprintf3("MsgMngApp driver app id %d  id %d len %d!\n", pkt.dest.app, GET_APP_ID, len);
+        if (pkt.dest.app == GET_APP_ID && pkt.dest.app == BROADCAST_ID)
+        {
+            if(pkt.type == MSG_TYPE_DriverGetInfo)
+            {
+                if (findDriver(pkt.source.driver.id_driver, &pdriver))
+                {
+                    pdriver->m_driverInfo.TotalInCnt    = (uint16_t) (((uint16_t) pkt.data[0] << 8) | pkt.data[1]);
+                    pdriver->m_driverInfo.TotalOutCnt   = (uint16_t) (((uint16_t) pkt.data[2] << 8) | pkt.data[3]);
+                    pdriver->m_driverInfo.TotalStateCnt = (uint16_t) (((uint16_t) pkt.data[4] << 8) | pkt.data[5]);
+                }
+                return true;
+            }
+            else
+                zprintf3("recv msg type %d len %d!\n", pkt.type, len);
+
+        }
+
+    }
+    zprintf1("wait MsgMng server info error!\n");
+    return false;
+
+}
+
 bool MsgMngApp::loginRecvMail(void)
 {
     sMsgUnit pkt;
@@ -667,14 +764,12 @@ bool MsgMngApp::loginRecvMail(void)
     return true;
 }
 
-int  msgmngapp_apprecv_back(MsgMngApp * pro,  sMsgUnit pkt)
+int  msgmngapp_apprecv_back(MsgMngApp * pro,  sMsgUnit pkt, int len)
 {
 
-    // sMsgUnit    pkt;
-    uint16_t    pkt_len;
-    driver*     pdriver;
+    // driver*     pdriver;
     // ackfunctype func;
-    // sNotifyMsg  notifypkt;
+    sNotifyMsg  notifypkt;
 
     // if (!pRecvMsg->ReceiveMsg(&pkt, &pkt_len, RECV_WAIT))
     // {
@@ -692,90 +787,47 @@ int  msgmngapp_apprecv_back(MsgMngApp * pro,  sMsgUnit pkt)
 
     switch (pkt.type)
     {
-    case MSG_TYPE_DriverGetInfo:
-    {
-        // sysLogQE() << "LibDeviceMng Test MSG_TYPE_DriverGetInfo";
-        // bool ret_checkwait = CheckWaitMsg(pkt.source, pkt.type);
-        // //            qDebug()<<"Test MSG_TYPE_DriverGetInfo ret_checkwait:"<<ret_checkwait;
-        // if (!ret_checkwait)
-        //     break;
-
-        // if (!pdevice->InitFinishFlag)
-        // {
-        //     //                qDebug()<<"Test MSG_TYPE_DriverGetInfo --1"<<" --
-        //     //                "<<QDateTime::currentMSecsSinceEpoch();
-        //     if (pdevice->FindDriver(pkt.source.driver.id_driver, &pdriver))
-        //     {
-        //         pdriver->DriverInfo.TotalInCnt    = (uint16_t) (((uint16_t) pkt.data[0] << 8) | pkt.data[1]);
-        //         pdriver->DriverInfo.TotalOutCnt   = (uint16_t) (((uint16_t) pkt.data[2] << 8) | pkt.data[3]);
-        //         pdriver->DriverInfo.TotalStateCnt = (uint16_t) (((uint16_t) pkt.data[4] << 8) | pkt.data[5]);
-        //         //                    qDebug()<<" pdriver->DriverInfo.TotalStateCnt =
-        //         //                    "<(uint16_t)(((uint16_t)pkt.data[4]<<8)|pkt.data[5]);
-        //         // memcpy(&pdriver->DriverInfo,&pkt.data[0],sizeof(sDriverInfoType));
-        //         /*bool ret_act = */ AckWaitMsg(pkt.source, pkt.type, 0);
-        //         //                    qDebug()<<"Test MSG_TYPE_DriverGetInfo --2 ret_act:"<<ret_act<<" --
-        //         //                    "<<QDateTime::currentMSecsSinceEpoch();
-        //     }
-        // }
-        // else
-        // {
-        //     //              qDebug()<<"Test MSG_TYPE_DriverGetInfo --3";
-        //     func = GetWaitFunc(pkt.source, pkt.type);
-        //     //               qDebug()<<"Test MSG_TYPE_DriverGetInfo --4";
-        //     if (func != 0)
-        //         func((void*) (&pkt.data[0]), pkt_len);
-        //     //              qDebug()<<"Test MSG_TYPE_DriverGetInfo --5";
-        // }
-    }
-    break;
-
-    case MSG_TYPE_AppReportDriverComNormal:
-        // sysLogQE() << "LibDeviceMng Test MSG_TYPE_AppReportDriverComNormal";
-        // if ((pkt.source.app == DeviceMngId) && (pkt_len == 1))
-        // {
-        //     if (pdevice->FindDriver(pkt.data[0], &pdriver))
-        //     {
-        //         pdriver->ComState = COMSTATE_NORMAL;
-        //     }
-        // }
+        case MSG_TYPE_DriverGetInfo:      //目前不用
+        {
+            ;
+        }
         break;
 
-    case MSG_TYPE_AppGetIOParam:
-    case MSG_TYPE_AppSetIOParam:
-        // sysLogQE() << "LibDeviceMng Test MSG_TYPE_AppGetIOParam";
-        // if (!CheckWaitMsg(pkt.source, pkt.type))
-        //     break;
-        // func = GetWaitFunc(pkt.source, pkt.type);
-        // if (func != 0)
-        //     func((void*) (&pkt.data[0]), pkt_len);
+        case MSG_TYPE_AppReportDriverComNormal:
+
         break;
 
-    case MSG_TYPE_AppReportDriverComAbnormal:
-        // sysLogQE() << "LibDeviceMng Test MSG_TYPE_AppReportDriverComAbnormal";
-        // if ((pkt.source.app == DeviceMngId) && (pkt_len == 1))
-        // {
-        //     if (pdevice->FindDriver(pkt.data[0], &pdriver))
-        //     {
-        //         pdriver->ComState = COMSTATE_ABNORMAL;
-        //     }
-        // }
+        case MSG_TYPE_AppGetIOParam:
+        case MSG_TYPE_AppSetIOParam:
 
-    default:
-        // if (NotifyList.size() < WAIT_MSG_MAX)
-        // {
-        //     pthread_mutex_lock(&NotifyListMutex);
-        //     memcpy(&notifypkt.MsgData, &pkt, sizeof(sMsgUnit));
-        //     notifypkt.MsgLen = pkt_len;
-        //     NotifyList.append(notifypkt);
-        //     pthread_mutex_unlock(&NotifyListMutex);
-        //     sem_post(&NotifySem);
-
-        //     // sysLogQD() << "------------------------------------NotifyList.append";
-        // }
         break;
+
+        case MSG_TYPE_AppReportDriverComAbnormal:
+            // sysLogQE() << "LibDeviceMng Test MSG_TYPE_AppReportDriverComAbnormal";
+            // if ((pkt.source.app == DeviceMngId) && (pkt_len == 1))
+            // {
+            //     if (pdevice->FindDriver(pkt.data[0], &pdriver))
+            //     {
+            //         pdriver->ComState = COMSTATE_ABNORMAL;
+            //     }
+            // }
+
+        default:
+            if (pro->m_notifyList.size() < WAIT_MSG_MAX)
+            {
+                pro->m_notifyMutex.lock();
+                memcpy(&notifypkt.MsgData, &pkt, sizeof(sMsgUnit));
+                notifypkt.MsgLen = len;
+                pro->m_notifyList.append(notifypkt);
+                pro->m_notifyMutex.unlock();
+                sem_post(&pro->m_notifySem);
+
+            }
+            break;
     }
     return 0;
 }
+
 bool MsgMngApp::initRecvMail(void)
 {
     m_appRecvMsg.msg_init(m_loginKeyId, 1);
@@ -790,5 +842,27 @@ bool MsgMngApp::initRecvMail(void)
         // }
         return false;
     }
-    m_appRecvMsg.z_pthread_init(msgmngapp_apprecv_back, this, "msgAppRecv");
+    // m_appRecvMsg.msgPthreadInit(msgmngapp_apprecv_back, this, "msgAppRecv");
+    return true;
+}
+
+
+bool MsgMngApp::initGetInfo(int driver_id, uint32_t timeout_ms)
+{
+    sMsgUnit pkt;
+    // sWaitMsg msg;
+
+    memset(&pkt, 0, sizeof(sMsgUnit));
+    pkt.source.app            = GET_APP_ID;
+    pkt.dest.driver.id_driver = driver_id;
+    pkt.type                  = MSG_TYPE_DriverGetInfo;
+
+    // pthread_mutex_lock(&WaitListMutex);
+    if (!m_sendToServMsg.sendMsg(&pkt, 0))
+    {
+        return false;
+    }
+
+    return waitDriverInfo(pkt);
+
 }

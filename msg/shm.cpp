@@ -203,3 +203,62 @@ bool shm::shm_readstate(char* pvalue, int len)
     return (ret == 0) ? true : false;
 
 }
+
+bool shm::shm_read_used(int parentid, int childid, int pointid, int type, int* pvalue)
+{
+    mShmIndex::Iterator item;
+    sDataUnit           temp;
+
+    if (IndexMap.isEmpty())
+        return false;
+
+    item = IndexMap.find(SERIALIZE_FUNC(parentid, childid, pointid, type));
+    //    qDebug()<<"shm_read parentid,childid,pointid"<<parentid<<childid<<pointid;
+    if ((item != IndexMap.end()) && (item.key() == SERIALIZE_FUNC(parentid, childid, pointid, type)))
+    {
+        //        qDebug()<<"shm_read read_object item.value():"<<item.value();
+        if (!(pDataShm->read_object(0, sizeof(sDataUnit), item.value(), (void*) (&temp))))
+            return false;
+        else
+        {
+            *pvalue = temp.used;
+            return true;
+        }
+    }
+    else
+        return false;
+}
+
+bool shm::shm_write_used(int parentid, int childid, int pointid, int type, int value)
+{
+    mShmIndex::Iterator item;
+    sDataUnit           temp;
+
+    if (IndexMap.isEmpty())
+        return false;
+
+    pCtrlShm->Lock();
+    item = IndexMap.find(SERIALIZE_FUNC(parentid, childid, pointid, type));
+    if ((item != IndexMap.end()) && (item.key() == SERIALIZE_FUNC(parentid, childid, pointid, type)))
+    {
+        if (!(pDataShm->nolockread_object(0, sizeof(sDataUnit), item.value(), (void*) (&temp))))
+        {
+            pCtrlShm->Unlock();
+            return false;
+        }
+
+        temp.used = value;
+        if (!(pDataShm->nolockwrite_object(0, sizeof(sDataUnit), item.value(), (void*) (&temp))))
+        {
+            pCtrlShm->Unlock();
+            return false;
+        }
+        pCtrlShm->Unlock();
+        return true;
+    }
+    else
+    {
+        pCtrlShm->Unlock();
+        return false;
+    }
+}

@@ -22,6 +22,7 @@ INCLUDEPATH += .\
 
 SOURCES += \
     msg/DeviceMng.cpp \
+    msg/DeviceMngApi.cpp \
     msg/MsgMng.cpp \
     msg/app.cpp \
     msg/driver.cpp \

@@ -1,48 +1,20 @@
 #include "DeviceMng.h"
 #include "MsgMng.h"
 
-
-DeviceMng::DeviceMng()
+DeviceMngBase::DeviceMngBase():m_initOk(false),m_pKey(NULL)
 {
-    // SysMinKey   = 0;
-    // SysMaxKey   = 0;
-    // AppStartKey = SysMaxKey + 1;
-    CfgList.clear();
-    // DriverTable.clear();
-    // AppUseKeyList.clear();
-    InitFinishFlag = false;
-    m_pMsgMngServer = MsgMngServer::GetMsgMngServer();
+    ;
+}
+DeviceMngBase::~DeviceMngBase()
+{
+    zprintf3("DeviceMngBase destruct!\n");
 }
 
-DeviceMng::~DeviceMng()
+void DeviceMngBase::deviceMngBaseInit(MsgKeyClass * key)
 {
-    mDriverTable::iterator item;
-
-    // sysLogQD() << "DeviceMng**************~DeviceMng";
-    // for (item = DriverTable.begin(); item != DriverTable.end(); ++item)
-    // {
-    //     // item.value()->pmsg->delete_object();
-    //     delete item.value();
-    //     item.value() = (driver*) 0;
-    // }
-    // CfgList.clear();
-    // DriverTable.clear();
-    // AppUseKeyList.clear();
-    CfgList.clear();
-    DELETE(m_pMsgMngServer);
+    m_pKey = key;
 }
-
-DeviceMng* DeviceMng::pDeviceCmd = NULL;
-DeviceMng* DeviceMng::GetDeviceMng()
-{
-    if (pDeviceCmd == NULL)
-    {
-        pDeviceCmd = new DeviceMng();
-    }
-    return pDeviceCmd;
-}
-
-void DeviceMng::loadCfgFile(const QString filePath)
+void DeviceMngBase::loadCfgFile(const QString & filePath)
 {
     QDomDocument doc;
     QString      filepathname = filePath;
@@ -83,57 +55,33 @@ void DeviceMng::loadCfgFile(const QString filePath)
     }
 }
 
-void DeviceMng::loadShareParam(const QString filePath)
+void DeviceMngBase::loadShareParam(const QString & filePath)
 {
     QSettings settings(filePath, QSettings::IniFormat);
     settings.setIniCodec("UTF-8");
 
+    if(m_pKey == NULL)
+    {
+        zprintf1("DeviceMngBase m_pKey is NULL!\n");
+        return;
+    }
     QString value;
+
+
 
     settings.beginGroup("MEMERY_PARAM");
     value     = QString("SYS_KEY_RESERVE");
-    m_pMsgMngServer->m_sysResMsgKey = settings.value(value).toInt();
+    m_pKey->m_resMsgKey = settings.value(value).toInt();
     value     = QString("SYS_KEY_MIN");
-    m_pMsgMngServer->m_sysMinMsgKey = settings.value(value).toInt();
+    m_pKey->m_minMsgKey = settings.value(value).toInt();
     value     = QString("SYS_KEY_MAX");
-    m_pMsgMngServer->m_sysMaxMsgKey = settings.value(value).toInt();
+    m_pKey->m_maxMsgKey = settings.value(value).toInt();
     settings.endGroup();
     settings.deleteLater();
 }
 
-// int DeviceMng::OperateAppMsgKey(eOperateKeyType mode, int key)
-// {
-//     int remain = SysMaxKey - AppStartKey + 1 - AppUseKeyList.size();
-//     if (mode == KEY_ADD)
-//     {
-//         if (remain <= 0)
-//             return 0;
-//         for (int i = AppStartKey; i < SysMaxKey; i++)
-//         {
-//             if (!AppUseKeyList.contains(i))
-//             {
-//                 AppUseKeyList.append(i);
-//                 return i;
-//             }
-//         }
-//     }
-//     else if (mode == KEY_SUB)
-//     {
-//         if (AppUseKeyList.size() == 0)
-//             return 0;
-//         for (int i = 0; i < AppUseKeyList.size(); i++)
-//         {
-//             if (AppUseKeyList.at(i) == key)
-//             {
-//                 AppUseKeyList.removeAt(i);
-//                 return 1;
-//             }
-//         }
-//     }
-//     return 0;
-// }
 
-bool DeviceMng::CheckParamValidity(void)
+bool DeviceMngBase::CheckParamValidity(void)
 {
     for (int i = 1; i < CfgList.size(); i++)
     {
@@ -146,34 +94,49 @@ bool DeviceMng::CheckParamValidity(void)
             }
         }
     }
-
-    if (m_pMsgMngServer->m_sysMaxMsgKey < m_pMsgMngServer->m_sysMinMsgKey)
-    {
-        zprintf1("DeviceMng SysMaxKey < SysMinKey!\n");
+    if(m_pKey == NULL)
         return false;
-    }
+    return m_pKey->keyCheckInit(CfgList.size());
 
-    // AppUseKeyList.clear();
-    if ((m_pMsgMngServer->m_sysMaxMsgKey - m_pMsgMngServer->m_sysMinMsgKey + 1) <= (DRIVER_SHARE_KEY_NUM * CfgList.size() + DEVICEMNG_SHARE_KEY_NUM))
+}
+
+int DeviceMngBase::GetDeviceMngKey(void)
+{
+    return m_pKey->m_minMsgKey;
+}
+
+int DeviceMngBase::GetDeviceMngResKey(void)
+{
+    return m_pKey->m_resMsgKey;
+}
+
+
+DeviceMng::DeviceMng()
+{
+
+    CfgList.clear();
+    m_pMngServ = MsgMngServer::GetMsgMngServer();
+    this->deviceMngBaseInit(m_pMngServ);
+}
+
+DeviceMng::~DeviceMng()
+{
+    // mDriverTable::iterator item;
+
+    CfgList.clear();
+    DELETE(m_pMngServ);
+}
+
+DeviceMng* DeviceMng::pDeviceCmd = NULL;
+DeviceMng* DeviceMng::GetDeviceMng()
+{
+    if (pDeviceCmd == NULL)
     {
-       zprintf1("DeviceMng SysKey num fail,SysMaxKey: %d SysMinKey: %d CfgList.size() %d!\n",m_pMsgMngServer->m_sysMaxMsgKey ,
-                m_pMsgMngServer->m_sysMinMsgKey , CfgList.size());
-        return false;
+        pDeviceCmd = new DeviceMng();
     }
-
-    m_pMsgMngServer->m_appStMsgKey = m_pMsgMngServer->m_sysMinMsgKey + DRIVER_SHARE_KEY_NUM * CfgList.size() + DEVICEMNG_SHARE_KEY_NUM;
-    return true;
+    return pDeviceCmd;
 }
 
-int DeviceMng::GetDeviceMngKey(void)
-{
-    return m_pMsgMngServer->m_sysMinMsgKey;
-}
-
-int DeviceMng::GetDeviceMngResKey(void)
-{
-    return m_pMsgMngServer->m_sysResMsgKey;
-}
 
 void DeviceMng::ShellSetupDriver(sDeviceCfg& cfg, int key, int drivermsgkey)
 {
@@ -200,11 +163,11 @@ bool DeviceMng::SetupDriver(void)
     driver*    pdriver;
     int        keytemp;
     sDeviceCfg cfg;
-    int        usekey = m_pMsgMngServer->m_sysMinMsgKey + DEVICEMNG_SHARE_KEY_NUM;
-    MsgMngServer*  pMsgMngServer = MsgMngServer::GetMsgMngServer();
+    int        usekey = m_pMngServ->m_minMsgKey + DEVICEMNG_SHARE_KEY_NUM;
+
     struct timeval tv;
 
-    keytemp = m_pMsgMngServer->m_sysMinMsgKey + DEVICEMNG_SHARE_KEY_NUM;
+    keytemp = m_pMngServ->m_minMsgKey + DEVICEMNG_SHARE_KEY_NUM;
 
     for (int i = 0; i < CfgList.size(); i++)
     {
@@ -215,13 +178,13 @@ bool DeviceMng::SetupDriver(void)
         cfg.name = CfgList.at(i).name;
         pdriver  = new driver(cfg.id, cfg.name, keytemp, keytemp + 1, keytemp + 2, keytemp + 3, keytemp + 4);
 
-        m_pMsgMngServer->m_driverTable.insert(cfg.id, pdriver);
+        m_pMngServ->m_driverTable.insert(cfg.id, pdriver);
         if (!pdriver->initMsg())
             return false;
 
         cfg.script = CfgList.at(i).script;
         ShellSetupDriver(
-            cfg, m_pMsgMngServer->m_sysMinMsgKey + DEVICEMNG_SHARE_KEY_NUM + DRIVER_SHARE_KEY_NUM * i, m_pMsgMngServer->m_sysMinMsgKey + 1);
+            cfg, m_pMngServ->m_minMsgKey + DEVICEMNG_SHARE_KEY_NUM + DRIVER_SHARE_KEY_NUM * i, m_pMngServ->m_minMsgKey + 1);
         usekey += DRIVER_SHARE_KEY_NUM;
 
         if(!pdriver->msgGetInfo())
@@ -230,7 +193,7 @@ bool DeviceMng::SetupDriver(void)
             return false;
         }
 
-        if(!pMsgMngServer->waitDriverInfo(pdriver))
+        if(!m_pMngServ->waitDriverInfo(pdriver))
         {
             zprintf1("DeviceMng device[%d] waitDriverInfo error!\n", cfg.id);
         }
@@ -243,12 +206,12 @@ bool DeviceMng::SetupDriver(void)
             return false;
         }
     }
-    m_pMsgMngServer->m_appStMsgKey = usekey;
+    m_pMngServ->m_appMsgKey = usekey;
 
     gettimeofday(&tv, NULL);
     zprintf3("DeviceMng device SetupDriver end time: %d.\n" ,tv.tv_sec);
 
-    pMsgMngServer->startRecvDrivMsgProcess();
+    m_pMngServ->startRecvDrivMsgProcess();
     // m_recvAppMsg.z_pthread_init(msgmng_apprecv_back, this, "msgservapprecv");
     return true;
 }
@@ -257,12 +220,12 @@ void DeviceMng::SendHeartToDriver(void)
 {
     mDriverTable::iterator item;
 
-    m_pMsgMngServer->m_recvDriMsg.lock();
-    for (item = m_pMsgMngServer->m_driverTable.begin(); item != m_pMsgMngServer->m_driverTable.end(); ++item)
+    m_pMngServ->m_recvDriMsg.lock();
+    for (item = m_pMngServ->m_driverTable.begin(); item != m_pMngServ->m_driverTable.end(); ++item)
     {
         item.value()->msgSendHeart();
     }
-    m_pMsgMngServer->m_recvDriMsg.unlock();
+    m_pMngServ->m_recvDriMsg.unlock();
 }
 
 void DeviceMng::DriverHeartMng(void)
@@ -271,7 +234,7 @@ void DeviceMng::DriverHeartMng(void)
     mDriverTable::iterator item;
     uint8_t                data;
 
-    for (item = m_pMsgMngServer->m_driverTable.begin(); item != m_pMsgMngServer->m_driverTable.end(); ++item)
+    for (item = m_pMngServ->m_driverTable.begin(); item != m_pMngServ->m_driverTable.end(); ++item)
     {
         if(item.value()->m_heartMark) //心跳错误
         {
@@ -296,4 +259,144 @@ void DeviceMng::DriverHeartMng(void)
 
         }
     }
+}
+
+
+/*******************************************************************************************************************************************
+ *
+ * DeviceMngApp
+ * **************************************************************************************************************************************/
+
+DeviceMngApp* DeviceMngApp::pAppCmd = NULL;
+DeviceMngApp* DeviceMngApp::getDeviceMngApp()
+{
+    if (pAppCmd == NULL)
+    {
+        pAppCmd = new DeviceMngApp();
+    }
+    return pAppCmd;
+}
+
+DeviceMngApp::DeviceMngApp()
+{
+    CfgList.clear();
+    m_pMngApp = MsgMngApp::getMsgMngApp();
+    this->deviceMngBaseInit(m_pMngApp);
+}
+DeviceMngApp::~DeviceMngApp()
+{
+    ;
+}
+
+bool DeviceMngApp::setupDriver(uint32_t timeout)
+{
+    driver*        pdriver;
+    int            keytemp;
+    sDeviceCfg     cfg;
+    struct timeval reporttime;
+
+    gettimeofday(&reporttime, NULL);
+    for (int i = 0; i < CfgList.size(); i++)
+    {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        keytemp  = m_pKey->m_minMsgKey + DEVICEMNG_SHARE_KEY_NUM + DRIVER_SHARE_KEY_NUM * i;
+        cfg.id   = CfgList.at(i).id;
+        cfg.name = CfgList.at(i).name;
+
+        // pdriver = new driver(cfg.id, cfg.name, keytemp, keytemp + 1, keytemp + 2, keytemp + 4);
+        pdriver  = new driver(cfg.id, cfg.name, keytemp, keytemp + 1, keytemp + 2, keytemp + 3, keytemp + 4);
+        m_pMngApp->m_driverTable.insert(cfg.id, pdriver);
+        if (!m_pMngApp->initGetInfo(cfg.id, timeout))
+        {
+            gettimeofday(&tv, NULL);
+            zprintf1("LibDeviceMng device[%d]=%d InitGetInfo error time: %d!\n" ,i, cfg.id, tv.tv_sec);
+            return false;
+        }
+        if (!pdriver->init())
+        {
+            gettimeofday(&tv, NULL);
+            zprintf1("LibDeviceMng device[%d]= %d Initmem error time: %d!\n",i, cfg.id, tv.tv_sec) ;
+            return false;
+        }
+        if (timeout != 0)
+        {
+            // if (timeout > timeruseMS(&reporttime))
+            //     timeout = timeout - timeruseMS(&reporttime);
+            // else
+            // {
+            //     timeout = 0;
+            //     gettimeofday(&tv, NULL);
+            //     sysLogQE() << "LibDeviceMng device[" << i << "]=" << cfg.id << " timeout error time:" << tv.tv_sec;
+            //     return false;
+            // }
+        }
+        gettimeofday(&tv, NULL);
+        zprintf3("LibDeviceMng device[%d]= %d  Init finish time: %d!\n", i, cfg.id, tv.tv_sec);
+    }
+
+    return true;
+}
+
+int  DeviceMngApp::initApp(void)
+{
+    struct timeval reporttime;
+
+
+    loadCfgFile(CFGXML_FILE_PATH);
+    loadShareParam(CFGINI_FILE_PATH);
+    if (!CheckParamValidity())
+    {
+        zprintf1("LibDeviceMng param check fail!\n");
+        return -2;
+    }
+
+    if (!m_pMngApp->initSendMail(m_pKey->m_minMsgKey, m_pKey->m_minMsgKey + 2, m_pKey->m_minMsgKey + 3))
+    {
+        zprintf1("LibDeviceMng self msg init fail!\n");
+        return -3;
+    }
+
+    gettimeofday(&reporttime, NULL);
+    if (!m_pMngApp->loginRecvMail())
+    {
+        zprintf1("LibDeviceMng login recv msg fail!\n");
+        return -4;
+    }
+
+    if (!m_pMngApp->initRecvMail())
+    {
+        zprintf1("LibDeviceMng recv msg init fail!\n");
+        return -5;
+    }
+
+    if (!setupDriver(0))
+    {
+        zprintf1("LibDeviceMng driver init fail!\n");
+        return -6;
+    }
+    m_initOk = true;
+    zprintf3("LibDeviceMng driver init InitFinishFlag true!\n");
+    return 1;
+}
+
+uint32_t DeviceMngApp::getAppid(
+    uint8_t DriverID, uint8_t ParentDeviceID, uint8_t ChildDeviceID, uint8_t PointID, uint8_t type)
+{
+    if ((DriverID >= 64) || (type > 3))
+        return 0;
+
+    return (((uint32_t) (type << 30)) | ((uint32_t) (DriverID << 24)) | ((uint32_t) (ParentDeviceID << 16)) |
+            ((uint32_t) (ChildDeviceID << 8)) | PointID);
+}
+
+
+void DeviceMngApp::changeAppid(
+    uint32_t appid, uint8_t* DriverID, uint8_t* ParentDeviceID, uint8_t* ChildDeviceID, uint8_t* PointID, uint8_t* type)
+{
+    *DriverID       = (uint8_t) ((appid & 0x3f000000) >> 24);
+    *ParentDeviceID = (uint8_t) ((appid & 0x00ff0000) >> 16);
+    *ChildDeviceID  = (uint8_t) ((appid & 0x0000ff00) >> 8);
+    *PointID        = (uint8_t) (appid & 0x000000ff);
+    *type           = (uint8_t) ((appid & 0xc0000000) >> 30);
 }

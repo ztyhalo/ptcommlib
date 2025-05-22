@@ -56,6 +56,7 @@ class shm
     bool shm_ctrl(int parentid, int childid, int pointid, double value);
     bool shm_write(int parentid, int childid, int pointid, double value);
     bool shm_readstate(char* pvalue, int len);
+    bool shm_read_used(int parentid, int childid, int pointid, int type, int* pvalue);
 };
 
 #endif // SHM_H

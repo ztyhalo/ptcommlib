@@ -18,6 +18,7 @@
 #define LOGIN_MSG_LEN    1
 #define NORMAL_MSG_LEN   9
 #define LOGIN_ACK_MSG_LEN    9
+#define ABNORMAL_MSG_LEN 1
 
 #define DEVICEMNG_SHARE_KEY_NUM 4 // 消息占用4个key
 #define DRIVER_SHARE_KEY_NUM    5 // 每个驱动占用5个key
@@ -32,6 +33,31 @@ typedef enum
 
 typedef QMap< uint32_t, app* >    mAppTable;
 typedef QMap< int,  driver * > mDriverTable;
+
+//后期尝试删除
+typedef struct
+{
+    sMsgUnit MsgData;
+    uint16_t MsgLen;
+} sNotifyMsg;
+typedef QList< sNotifyMsg > lNotifyList;
+
+
+class MsgKeyClass
+{
+  public:
+    int             m_resMsgKey;
+    int             m_minMsgKey;
+    int             m_maxMsgKey;
+    int             m_appMsgKey; //app 开始消息key值
+    QList< int >    m_appUseKeyList;
+
+  public:
+    MsgKeyClass();
+    ~MsgKeyClass();
+    int  operateAppMsgKey(eOperateKeyType mode, int key);
+    bool  keyCheckInit(int size);
+};
 
 
 class MsgMngBase :public MsgRevClass<sMsgUnit>
@@ -62,45 +88,26 @@ public:
     static MsgMngDriver  * m_pMsgMngDriver;
     ~MsgMngDriver();
     bool Init(int recvkey,int sendkey, PtDriverBase * pdriver);
-    void msgRecvProcess(sMsgUnit val) override;
+    void msgRecvProcess(sMsgUnit val, int len) override;
     void msgmng_send_msg(sMsgUnit *pdata, uint16_t size);
 };
 
 //消息管理服务类
-class MsgMngServer
+class MsgMngServer:public MsgKeyClass
 {
 private:
-    // pthread_t     DriverMsg_id;
-    // pthread_t     AppMsg_id;
-    // msg*          pResMsg;
-    // msg*          pDriverMsg;
-    // msg*          pAppMsg;
-    // msg*          pAppTotalMsg;
-    // lWaitList     WaitDriverList;
-    // mAppTable       m_appTable;
-    // mAppNameTable AppNameTable;
-    // SemObject*    pinitsem;
-     LSystemSem*    m_pInitSem;
 
-
+    LSystemSem*    m_pInitSem;
     MsgMngServer();
 
-
-    // bool CheckWaitMsg(Type_MsgAddr waitid, uint16_t type);
-    // bool AckWaitMsg(Type_MsgAddr waitid, uint16_t type);
-    // bool isProcessExists(qint64 pid);
-
 public:
-    int                                     m_sysResMsgKey;
-    int                                     m_sysMinMsgKey;
-    int                                     m_sysMaxMsgKey;
-    int                                     m_appStMsgKey;
+
     mDriverTable                            m_driverTable;
     mAppTable                               m_appTable;
     MsgRevBackClass<sMsgUnit, MsgMngServer> m_recvDriMsg;
     MsgRevBackClass<sMsgUnit, MsgMngServer> m_recvAppMsg;
     MsgSendBase                             m_sendToAppMsg;
-    QList< int >                            m_appUseKeyList;
+
 
 
     bool                    cancel;
@@ -118,19 +125,16 @@ public:
     void startRecvDrivMsgProcess(void);
     void startRecvAppMsgProcess(void);
     bool isAppMapExist(uint32_t id);
-    int  operateAppMsgKey(eOperateKeyType mode, int key);
     bool isProcessExists(qint64 pid);
 
-    // bool InsertWaitMsg(Type_MsgAddr& waitid, uint16_t type, sem_t* pack);
-    // void DriverMsgProcess(void);
-    // void AppMsgProcess(void);
-    // bool BroadcastToApp(uint16_t type, uint8_t* data, uint16_t len);
 };
 
-class MsgMngApp
+//消息应用app类
+class MsgMngApp:public MsgKeyClass
 {
-
-  public:
+private:
+        MsgMngApp();
+public:
     mDriverTable                            m_driverTable;
     mAppTable                               m_appTable;
 
@@ -144,27 +148,28 @@ class MsgMngApp
     bool                                    m_isRecv;
     int                                     m_loginKeyId;
 
-    MsgMngApp();
-    // bool        CheckWaitMsg(Type_MsgAddr waitid, uint16_t type);
-    // bool        AckWaitMsg(Type_MsgAddr waitid, uint16_t type, uint8_t mode);
-    // void        timeraddMS(struct timeval* a, uint32_t ms);
-    // bool        WaitTimeMsgAck(uint32_t waittime_ms, sWaitMsg* pmsg);
-    // bool        InsertWaitMsg(sWaitMsg* waitmsg);
-    // ackfunctype GetWaitFunc(Type_MsgAddr waitid, uint16_t type);
-    // bool        SendMail(sMsgUnit& pkt, uint16_t pkt_len, ackfunctype func, uint32_t timeout);
-    // void        CheckTimeoutMsg(uint16_t intervaltime);
+    sem_t                                   m_notifySem;
+    lNotifyList                             m_notifyList;
+    MUTEX_CLASS                             m_notifyMutex;
 
+    static MsgMngApp*    m_pMsgMngApp;
+
+    static MsgMngApp* getMsgMngApp(void);
 
     ~MsgMngApp();
-    // void RecvMsgProcess(void);
-    // void TotalMsgProcess(void);
+
     bool initSendMail(int sendkey, int totalkey, int totalmutexkey);
     bool loginRecvMail(void);
+    bool findDriver(uint8_t id, driver** ppdriver);
     bool waitServerInfo(sMsgUnit & pkt);
+    bool waitDriverInfo(sMsgUnit & pkt);
     bool initRecvMail(void);
-    // bool InitGetInfo(int driver_id, uint32_t timeout_ms);
-    // bool MsgSendProcess(Type_MsgAddr& addr, uint16_t msgtype, ackfunctype func, uint8_t* pdata, uint16_t len);
-    // void SetIsRecv(bool isRecv);
+    bool initGetInfo(int driver_id, uint32_t timeout_ms);
+    void setIsRecv(bool isRecv)
+    {
+        m_isRecv = isRecv;
+    }
+
 };
 
 #endif // MSGMNG_H
