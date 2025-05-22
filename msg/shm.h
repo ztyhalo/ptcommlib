@@ -11,7 +11,10 @@
 #define DATA_AREA_POINT_MAX     4000
 #define PARENT_DEVICE_MAX       100
 #define CHILD_DEVICE_MAX        200
-#define SERIALIZE_FUNC(x, y, z) (PARENT_DEVICE_MAX * CHILD_DEVICE_MAX * z + PARENT_DEVICE_MAX * y + x)
+#define TYPE_DEVICE_MAX     4
+#define SERIALIZE_FUNC(x, y, z, w)                                                  \
+(TYPE_DEVICE_MAX * PARENT_DEVICE_MAX * CHILD_DEVICE_MAX * z + TYPE_DEVICE_MAX * PARENT_DEVICE_MAX * y + \
+    TYPE_DEVICE_MAX * x + w)
 
 // typedef struct
 // {
@@ -52,11 +55,15 @@ class shm
     bool shm_create(int incnt, int statecnt);
     bool shm_delete(void);
     bool shm_init(void);
-    bool shm_read(int parentid, int childid, int pointid, double* pvalue);
+    bool shm_read(int parentid, int childid, int pointid, int type, double* pvalue);
     bool shm_ctrl(int parentid, int childid, int pointid, double value);
-    bool shm_write(int parentid, int childid, int pointid, double value);
+    bool shm_write(int parentid, int childid, int pointid, int type, double value);
+    double* shm_get_datapoint(int parentid, int childid, int pointid, int type);
     bool shm_readstate(char* pvalue, int len);
+    bool shm_readstate(int childid, char* pvalue, int len);
     bool shm_read_used(int parentid, int childid, int pointid, int type, int* pvalue);
+    bool shm_ctrl(uint8_t driid, int parentid, int childid, int pointid, double value);
+    bool shm_write_used(int parentid, int childid, int pointid, int type, int value);
 };
 
 #endif // SHM_H

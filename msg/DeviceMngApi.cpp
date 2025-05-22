@@ -1,7 +1,8 @@
 #include "DeviceMngApi.h"
-#include <QApplication>
-#include "libdefdebuglog.h"
-#include "libcommon.h"
+#include "timers.h"
+// #include <QApplication>
+// #include "libdefdebuglog.h"
+// #include "libcommon.h"
 void SignalFunc(int var)
 {
     Q_UNUSED(var);
@@ -125,16 +126,16 @@ double* DeviceMngApi::get_data_point(uint32_t AppId)
 {
     uint8_t DriverId, ParentDeviceId, ChildDeviceId, PointId, type;
     driver* pdriver;
-    double* pvalue;
+    double* pvalue = NULL;
 
-    pDeviceMng->ChangeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
-    if (!pDeviceMng->FindDriver(DriverId, &pdriver))
+    m_pAppDevMng->changeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
+    if (!m_pAppDevMng->m_pMngApp->findDriver(DriverId, &pdriver))
     {
-        sysLogQE() << "LibDeviceMng FindDriver fail!";
-        return 0;
+        zprintf1("LibDeviceMng FindDriver fail!\n");
+        return NULL;
     }
 
-    pvalue = pdriver->GetDataPoint(ParentDeviceId, ChildDeviceId, PointId, type);
+    // pvalue = pdriver->GetDataPoint(ParentDeviceId, ChildDeviceId, PointId, type);
     return pvalue;
 }
 
@@ -144,14 +145,13 @@ bool DeviceMngApi::read_data(uint32_t AppId, double* value)
     driver* pdriver;
     bool    ret;
 
-    pDeviceMng->ChangeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
-    if (!pDeviceMng->FindDriver(DriverId, &pdriver))
+    m_pAppDevMng->changeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
+    if (!m_pAppDevMng->m_pMngApp->findDriver(DriverId, &pdriver))
     {
-        sysLogQE() << "LibDeviceMng FindDriver fail!";
+        zprintf1("LibDeviceMng FindDriver fail!\n");
         return false;
     }
-    ret = pdriver->pshm->shm_read(ParentDeviceId, ChildDeviceId, PointId, type, value);
-    //   qDebug()<<"DeviceMngApi read_data, appid:  ret:"<<AppId<<"value:"<<*value <<ret;
+    ret = pdriver->m_pShm->shm_read(ParentDeviceId, ChildDeviceId, PointId, type, value);
     return ret;
 }
 
@@ -161,13 +161,13 @@ bool DeviceMngApi::write_data(uint32_t AppId, double value)
     driver* pdriver;
     bool    ret;
 
-    pDeviceMng->ChangeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
-    if (!pDeviceMng->FindDriver(DriverId, &pdriver))
+    m_pAppDevMng->changeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
+    if (!m_pAppDevMng->m_pMngApp->findDriver(DriverId, &pdriver))
     {
-        sysLogQE() << "LibDeviceMng FindDriver fail!";
+        zprintf1("LibDeviceMng FindDriver fail!\n");
         return false;
     }
-    ret = pdriver->pshm->shm_write(ParentDeviceId, ChildDeviceId, PointId, type, value);
+    ret = pdriver->m_pShm->shm_write(ParentDeviceId, ChildDeviceId, PointId, type, value);
     return ret;
 }
 
@@ -176,18 +176,20 @@ bool DeviceMngApi::read_ctrl_used(uint32_t AppId, int* value)
     uint8_t DriverId, ParentDeviceId, ChildDeviceId, PointId, type;
     driver* pdriver;
 
-    pDeviceMng->ChangeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
-    if (!pDeviceMng->FindDriver(DriverId, &pdriver))
+    m_pAppDevMng->changeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
+    if (!m_pAppDevMng->m_pMngApp->findDriver(DriverId, &pdriver))
     {
-        sysLogQE() << "LibDeviceMng FindDriver fail!";
+        zprintf1("LibDeviceMng FindDriver fail!\n");
         return false;
     }
-    if (!pdriver->pshm->shm_read_used(ParentDeviceId, ChildDeviceId, PointId, type, value))
+    if (pdriver->m_pShm->shm_read_used(ParentDeviceId, ChildDeviceId, PointId, type, value))
+        return true;
+    else
     {
-        sysLogQE() << "LibDeviceMng read_ctrl_used shm_read_used fail!";
+        zprintf1("LibDeviceMng read_ctrl_used shm_read_used fail!\n");
         return false;
     }
-    return true;
+
 }
 
 bool DeviceMngApi::ctrl_data(uint32_t AppId, double value)
@@ -196,14 +198,14 @@ bool DeviceMngApi::ctrl_data(uint32_t AppId, double value)
     driver* pdriver;
     bool    ret;
 
-    pDeviceMng->ChangeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
-    if (!pDeviceMng->FindDriver(DriverId, &pdriver))
+    m_pAppDevMng->changeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
+    if (!m_pAppDevMng->m_pMngApp->findDriver(DriverId, &pdriver))
     {
-        sysLogQE() << "LibDeviceMng FindDriver fail!";
+        zprintf1("LibDeviceMng FindDriver fail!\n");
         return false;
     }
-    pdriver->pshm->shm_write_used(ParentDeviceId, ChildDeviceId, PointId, type, 1);
-    ret = pdriver->pshm->shm_ctrl(DriverId, ParentDeviceId, ChildDeviceId, PointId, value);
+    pdriver->m_pShm->shm_write_used(ParentDeviceId, ChildDeviceId, PointId, type, 1);
+    ret = pdriver->m_pShm->shm_ctrl(DriverId, ParentDeviceId, ChildDeviceId, PointId, value);
     return ret;
 }
 
@@ -214,39 +216,41 @@ bool DeviceMngApi::ctrl_data_block(uint32_t AppId, double value, uint32_t overti
     bool    ret;
     int     used, ticks, WaitTicks;
 
-    //    qDebug()<<"DeviceMngApi ChangeAppid ctrl_data start";
-    pDeviceMng->ChangeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
-    //    qDebug()<<"DeviceMngApi ChangeAppid AppId:"<<AppId;
-    if (!pDeviceMng->FindDriver(DriverId, &pdriver))
+    m_pAppDevMng->changeAppid(AppId, &DriverId, &ParentDeviceId, &ChildDeviceId, &PointId, &type);
+
+    if (!m_pAppDevMng->m_pMngApp->findDriver(DriverId, &pdriver))
     {
-        sysLogQE() << "LibDeviceMng FindDriver fail!";
+        zprintf1("LibDeviceMng func %s FindDriver fail!\n", __func__);
         return false;
     }
-    //    qDebug()<<"DeviceMngApi FindDriver success!";
+
 
     GET_SYS_TIME_MS(ticks);
     WaitTicks = ticks + overtime_10ms * 10;
 
     while (ticks <= WaitTicks)
     {
-        if (!pdriver->pshm->shm_read_used(ParentDeviceId, ChildDeviceId, PointId, type, &used))
+        if (pdriver->m_pShm->shm_read_used(ParentDeviceId, ChildDeviceId, PointId, type, &used))
         {
-            sysLogQE() << "LibDeviceMng ctrl_data shm_read_used fail!";
+            if (used == 0)
+            {
+                ret = pdriver->m_pShm->shm_ctrl(DriverId, ParentDeviceId, ChildDeviceId, PointId, value);
+                if (ret)
+                    pdriver->m_pShm->shm_write_used(ParentDeviceId, ChildDeviceId, PointId, type, 1);
+
+                return ret;
+            }
+            USLEEP(10);
+            GET_SYS_TIME_MS(ticks);
+
+        }
+        else
+        {
+            zprintf1("LibDeviceMng ctrl_data shm_read_used fail func %s !\n", __func__);
             return false;
         }
-
-        if (used == 0)
-        {
-            ret = pdriver->pshm->shm_ctrl(DriverId, ParentDeviceId, ChildDeviceId, PointId, value);
-            if (ret)
-                pdriver->pshm->shm_write_used(ParentDeviceId, ChildDeviceId, PointId, type, 1);
-
-            return ret;
-        }
-        USLEEP(10);
-        GET_SYS_TIME_MS(ticks);
     }
-    sysLogQD() << "LibDeviceMng ctrl_data wait shm_read_used over time!";
+    zprintf1("LibDeviceMng ctrl_data wait shm_read_used over time!\n");
     return false;
 }
 
@@ -255,8 +259,8 @@ bool DeviceMngApi::get_param(uint32_t AppId, backcallfunc func)
     bool         ret;
     Type_MsgAddr addr;
 
-    addr.app = AppId;
-    ret      = pMsgMng->MsgSendProcess(addr, MSG_TYPE_AppGetIOParam, (ackfunctype) func, NULL, 0);
+    // addr.app = AppId;
+    // ret      = m_pAppDevMng->m_pMngApp->MsgSendProcess(addr, MSG_TYPE_AppGetIOParam, (ackfunctype) func, NULL, 0);
     return ret;
 }
 
@@ -270,7 +274,7 @@ bool DeviceMngApi::set_param(uint32_t AppId, void* paramlist, uint16_t len, eEff
     len      = (len < MSG_UNIT_LENGTH) ? len : MSG_UNIT_LENGTH - 1;
     data[0]  = mode;
     memcpy(&data[1], (uint8_t*) paramlist, len);
-    ret = pMsgMng->MsgSendProcess(addr, MSG_TYPE_AppSetIOParam, (ackfunctype) func, data, len + 1);
+    // ret = pMsgMng->MsgSendProcess(addr, MSG_TYPE_AppSetIOParam, (ackfunctype) func, data, len + 1);
     return ret;
 }
 
@@ -281,7 +285,7 @@ bool DeviceMngApi::get_deviceinfo(uint8_t DriverId, backcallfunc func)
 
     addr.app              = 0;
     addr.driver.id_driver = DriverId;
-    ret                   = pMsgMng->MsgSendProcess(addr, MSG_TYPE_DriverGetInfo, (ackfunctype) func, NULL, 0);
+    // ret                   = pMsgMng->MsgSendProcess(addr, MSG_TYPE_DriverGetInfo, (ackfunctype) func, NULL, 0);
     return ret;
 }
 
@@ -292,33 +296,32 @@ bool DeviceMngApi::wait_msg(sMsgUnit* recvmsg, uint16_t* msglen, eWaitMsgType mo
 
     if (mode == WAIT_MSG_BLOCK)
     {
-        ret = sem_wait(&pMsgMng->NotifySem);
+        ret = sem_wait(&m_pAppDevMng->m_pMngApp->m_notifySem);
     }
     else
     {
-        ret = sem_trywait(&pMsgMng->NotifySem);
+        ret = sem_trywait(&m_pAppDevMng->m_pMngApp->m_notifySem);
     }
 
     if (ret < 0)
     {
-        sysLogQD() << "LibDeviceMng sem_trywait  ret <0";
+        zprintf1("LibDeviceMng sem_trywait  ret <0!\n");
         return false;
     }
 
-    if (pMsgMng->NotifyList.size() <= 0)
+    if (m_pAppDevMng->m_pMngApp->m_notifyList.size() <= 0)
     {
-        sysLogQD() << "LibDeviceMng  pMsgMng->NotifyList.size() =" << pMsgMng->NotifyList.size();
+        zprintf1("LibDeviceMng  pMsgMng->NotifyList.size() = %d!\n" ,m_pAppDevMng->m_pMngApp->m_notifyList.size());
         return false;
     }
 
-    pthread_mutex_lock(&pMsgMng->NotifyListMutex);
-    item = pMsgMng->NotifyList.begin();
+    m_pAppDevMng->m_pMngApp->m_notifyMutex.lock();
+    item = m_pAppDevMng->m_pMngApp->m_notifyList.begin();
     memcpy(recvmsg, &((*item).MsgData), sizeof(sMsgUnit));
     *msglen = (*item).MsgLen;
-    pMsgMng->NotifyList.erase(item);
-    pthread_mutex_unlock(&pMsgMng->NotifyListMutex);
+    m_pAppDevMng->m_pMngApp->m_notifyList.erase(item);
+    m_pAppDevMng->m_pMngApp->m_notifyMutex.unlock();
 
-    //sysLogQD() << "------------------------------------NotifyList.erase";
     return true;
 }
 
@@ -333,12 +336,12 @@ bool DeviceMngApi::read_state(uint8_t DriverId, int childid, char* value, uint16
         DriverId = 1;
     }
 
-    if (!pDeviceMng->FindDriver(DriverId, &pdriver))
+    if (!m_pAppDevMng->m_pMngApp->findDriver(DriverId, &pdriver))
     {
         sysLogT("LibDeviceMng FindDriver fail!");
         return false;
     }
-    ret = pdriver->pshm->shm_readstate(childid, value, len);
+    ret = pdriver->m_pShm->shm_readstate(childid, value, len);
     return ret;
 }
 

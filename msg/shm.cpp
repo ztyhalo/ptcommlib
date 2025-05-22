@@ -1,5 +1,5 @@
 #include "shm.h"
-
+uint32_t gSemNum;
 
 shm::shm(int inkey, int outkey, int outsem, int statekey):data_key(inkey),ctrl_key(outkey),
       ctrl_semkey(outsem),state_key(statekey),data_cnt(0),m_pDataShm(NULL),m_pCtrlShm(NULL),
@@ -99,20 +99,20 @@ bool shm::shm_init(void)
     zprintf3("DeviceMng shm_init data_cnt: %d.\n" , data_cnt);
     for (int i = 0; i < data_cnt; i++)
     {
-        if (m_pDataShm->get_data(i, temp) != 0)
+        if (m_pDataShm->get_data(i, temp) == 0)
+            IndexMap.insert(SERIALIZE_FUNC(temp.parentid, temp.childid, temp.pointid, temp.num), i);
+        else
         {
             zprintf1("DeviceMng shm_init fail!\n");
             return false;
         }
-
-        IndexMap.insert(SERIALIZE_FUNC(temp.parentid, temp.childid, temp.pointid), i);
     }
     zprintf3("DeviceMng shm_init sucess.\n");
     return true;
 }
 
 
-bool shm::shm_read(int parentid, int childid, int pointid, double* pvalue)
+bool shm::shm_read(int parentid, int childid, int pointid, int type, double* pvalue)
 {
     mShmIndex::Iterator item;
     sDataUnit           temp;
@@ -122,23 +122,24 @@ bool shm::shm_read(int parentid, int childid, int pointid, double* pvalue)
         zprintf1("DeviceMng IndexMap.isEmpty!\n");
         return false;
     }
-    item = IndexMap.find(SERIALIZE_FUNC(parentid, childid, pointid));
-    if ((item != IndexMap.end()) && (item.key() == SERIALIZE_FUNC(parentid, childid, pointid)))
+    item = IndexMap.find(SERIALIZE_FUNC(parentid, childid, pointid, type));
+    if ((item != IndexMap.end()) && (item.key() == SERIALIZE_FUNC(parentid, childid, pointid, type)))
     {
-        if (!(m_pDataShm->get_data(item.value(), temp)))
-        {
-            zprintf1("DeviceMng read_object.fall!\n");
-            return false;
-        }
-        else
+        if (m_pDataShm->get_data(item.value(), temp) == 0)
         {
             *pvalue = temp.value;
             return true;
         }
+        else
+        {
+            zprintf1("DeviceMng read_object.%d.%d.%d type %d error!\n", parentid, childid, pointid, type);
+            return false;
+        }
     }
     else
     {
-        zprintf1("DeviceMng read_object.nofind %d parentid: %d func %d!\n", item.key(), parentid,SERIALIZE_FUNC(parentid, childid, pointid));
+        zprintf1("DeviceMng read_object.nofind %d parentid: %d func %d!\n", item.key(), parentid,
+                   SERIALIZE_FUNC(parentid, childid, pointid,type));
         return false;
     }
 }
@@ -159,10 +160,40 @@ bool shm::shm_ctrl(int parentid, int childid, int pointid, double value)
         return true;
     }
     else
+    {
+        zprintf1("shm ctrl %d.%d.%d value %d error!\n", parentid, childid, pointid,value);
         return false;
+    }
 }
 
-bool shm::shm_write(int parentid, int childid, int pointid, double value)
+bool shm::shm_ctrl(uint8_t driid, int parentid, int childid, int pointid, double value)
+{
+
+    bool      ret;
+    soutDataUnit data;
+
+
+    data.num      = 2;
+    data.parentid = parentid;
+    data.childid  = childid;
+    data.pointid  = pointid;
+    data.value    = value;
+
+    ret = m_pCtrlShm->write_send_data(data);
+    if(ret == false)
+    {
+        zprintf1("shm ctrl %d.%d.%d value %d error!\n", parentid, childid, pointid,value);
+        return false;
+    }
+
+    if (driid == 3)
+    {
+        gSemNum++;
+    }
+    return true;
+}
+
+bool shm::shm_write(int parentid, int childid, int pointid, int type, double value)
 {
     mShmIndex::Iterator item;
     sDataUnit           temp;
@@ -172,22 +203,22 @@ bool shm::shm_write(int parentid, int childid, int pointid, double value)
         zprintf1("shm write DeviceMng IndexMap.isEmpty!\n");
         return false;
     }
-    item = IndexMap.find(SERIALIZE_FUNC(parentid, childid, pointid));
-    if ((item != IndexMap.end()) && (item.key() == SERIALIZE_FUNC(parentid, childid, pointid)))
+    item = IndexMap.find(SERIALIZE_FUNC(parentid, childid, pointid, type));
+    if ((item != IndexMap.end()) && (item.key() == SERIALIZE_FUNC(parentid, childid, pointid, type)))
     {
-         if (!(m_pDataShm->get_data(item.value(), temp)))
+        if (m_pDataShm->get_data(item.value(), temp) != 0)
         {
-            zprintf1("DeviceMng pDataShm read_object error!\n");
+            zprintf1("DeviceMng shm_write get %d.%d.%d type %d error!\n", parentid, childid, pointid, type);
             return false;
         }
         temp.value = value;
-        if(m_pDataShm->set_data(item.value(), temp) != 0)
+        if(m_pDataShm->set_data(item.value(), temp) == 0)
+            return true;
+        else
         {
-            zprintf1("shm_write pDataShm set_data error!\n");
+            zprintf1("shm_write pDataShm %d.%d.%d type %d error!\n", parentid, childid, pointid, type);
             return false;
         }
-
-        return true;
     }
     else
     {
@@ -196,12 +227,49 @@ bool shm::shm_write(int parentid, int childid, int pointid, double value)
     }
 }
 
+double* shm::shm_get_datapoint(int parentid, int childid, int pointid, int type)
+{
+    mShmIndex::Iterator item;
+    sDataUnit     *     ptemp;
+
+    if (IndexMap.isEmpty())
+        return 0;
+
+    item = IndexMap.find(SERIALIZE_FUNC(parentid, childid, pointid, type));
+    if ((item != IndexMap.end()) && (item.key() == SERIALIZE_FUNC(parentid, childid, pointid, type)))
+    {
+        ptemp = m_pDataShm->getDataAddr(item.value());
+        if (ptemp != 0)
+            return &(ptemp->value);
+        else
+        {
+            zprintf1("shm get datapoint  %d.%d.%d type %d error!\n", parentid, childid, pointid, type);
+            return 0;
+        }
+    }
+    else
+        return 0;
+}
+
 bool shm::shm_readstate(char* pvalue, int len)
 {
     int ret;
     ret = m_pStateShm->get_data(0, pvalue, len);
     return (ret == 0) ? true : false;
 
+}
+
+bool shm::shm_readstate(int childid, char* pvalue, int len)
+{
+    int ret;
+    ret = m_pStateShm->get_data(childid, pvalue, len);
+    if(ret == 0)
+        return true;
+    else
+    {
+        zprintf1("shm readstate childid %d error!\n", childid);
+        return false;
+    }
 }
 
 bool shm::shm_read_used(int parentid, int childid, int pointid, int type, int* pvalue)
@@ -213,16 +281,18 @@ bool shm::shm_read_used(int parentid, int childid, int pointid, int type, int* p
         return false;
 
     item = IndexMap.find(SERIALIZE_FUNC(parentid, childid, pointid, type));
-    //    qDebug()<<"shm_read parentid,childid,pointid"<<parentid<<childid<<pointid;
+
     if ((item != IndexMap.end()) && (item.key() == SERIALIZE_FUNC(parentid, childid, pointid, type)))
     {
-        //        qDebug()<<"shm_read read_object item.value():"<<item.value();
-        if (!(pDataShm->read_object(0, sizeof(sDataUnit), item.value(), (void*) (&temp))))
-            return false;
+        if (m_pDataShm->get_data(item.value(), temp) == 0)
+        {
+            *pvalue = temp.state;
+            return true;
+        }
         else
         {
-            *pvalue = temp.used;
-            return true;
+            zprintf1("shm get datapoint  %d.%d.%d type %d error!\n", parentid, childid, pointid, type);
+            return false;
         }
     }
     else
@@ -237,28 +307,35 @@ bool shm::shm_write_used(int parentid, int childid, int pointid, int type, int v
     if (IndexMap.isEmpty())
         return false;
 
-    pCtrlShm->Lock();
+    m_pDataShm->lock();
     item = IndexMap.find(SERIALIZE_FUNC(parentid, childid, pointid, type));
     if ((item != IndexMap.end()) && (item.key() == SERIALIZE_FUNC(parentid, childid, pointid, type)))
     {
-        if (!(pDataShm->nolockread_object(0, sizeof(sDataUnit), item.value(), (void*) (&temp))))
+        if (m_pDataShm->noblock_get_data(item.value(), temp) == 0)
         {
-            pCtrlShm->Unlock();
+            temp.state = value;
+            if(m_pDataShm->noblock_set_data(item.value(), temp) == 0)
+            {
+                m_pDataShm->unlock();
+                return true;
+            }
+            else
+            {
+                m_pDataShm->unlock();
+                zprintf1("shm_write_used set %d.%d.%d type %d error!\n", parentid, childid, pointid, type);
+                return false;
+            }
+        }
+        else
+        {
+            m_pDataShm->unlock();
+            zprintf1("shm_write_used get %d.%d.%d type %d error!\n", parentid, childid, pointid, type);
             return false;
         }
-
-        temp.used = value;
-        if (!(pDataShm->nolockwrite_object(0, sizeof(sDataUnit), item.value(), (void*) (&temp))))
-        {
-            pCtrlShm->Unlock();
-            return false;
-        }
-        pCtrlShm->Unlock();
-        return true;
     }
     else
     {
-        pCtrlShm->Unlock();
+        m_pDataShm->unlock();
         return false;
     }
 }

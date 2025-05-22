@@ -18,6 +18,13 @@ typedef enum
     WAIT_MSG_UNBLOCK
 } eWaitMsgType;
 
+#define GET_SYS_TIME_MS(x)                                                                                             \
+{                                                                                                                  \
+        struct timeval tv;                                                                                             \
+        gettimeofday(&tv, NULL);                                                                                       \
+        x = tv.tv_sec * 1000 + tv.tv_usec / 1000;                                                                      \
+}
+
 enum
 {
     ERR_NONE             = 1,
