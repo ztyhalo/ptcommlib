@@ -50,7 +50,7 @@ class shm
     mShmIndex  IndexMap;
 
   public:
-    shm(int inkey, int outkey, int outsem, int statekey);
+    explicit shm(int inkey, int outkey, int outsem, int statekey);
     ~shm();
     bool shm_create(int incnt, int statecnt);
     bool shm_delete(void);

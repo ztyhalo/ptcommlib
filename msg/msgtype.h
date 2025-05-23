@@ -53,10 +53,10 @@ enum
 
 typedef struct
 {
-    Type_MsgAddr source;
-    Type_MsgAddr dest;
-    uint16_t            type;
-    uint8_t              data[MSG_UNIT_LENGTH];
+    Type_MsgAddr    source;
+    Type_MsgAddr    dest;
+    uint16_t        type;
+    uint8_t         data[MSG_UNIT_LENGTH];
 }sMsgUnit;
 
 #endif // MSGTYPE_H

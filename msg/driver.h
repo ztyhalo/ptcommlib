@@ -5,7 +5,6 @@
 #include <semaphore.h>
 #include "shm.h"
 #include "msg.h"
-// #include <time.h>
 
 typedef struct
 {
@@ -16,14 +15,13 @@ typedef struct
 
 typedef struct
 {
-    int data_key;
-    int ctrl_key;
-    int sem_key;
-    int recvmsg_key;
-    int sendmsg_key;
-
+    int data_key;    //输出输出共享数据key
+    int ctrl_key;    //输出控制共享数据key
+    int sem_key;     //输出控制信号量key
+    int recvmsg_key; //接收msg消息key 37
+    int sendmsg_key; //发送msg消息key 31
     int driverid;
-    int state_key;
+    int state_key;  //共享设备状态key
 
 }sDriverInfo;
 

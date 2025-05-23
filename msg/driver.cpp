@@ -1,16 +1,21 @@
 #include "driver.h"
-// #include "MsgMng.h"
 #include "timers.h"
 
-driver::driver(int id, QString& name, int shminkey, int shmoutkey, int shmoutsem, int msgkey, int shmstatekey)
+driver::driver(int id, QString& name, int shminkey, int shmoutkey, int shmoutsem, int msgkey, int shmstatekey):
+      m_drivName(name),m_driverId(id),m_heartMark(0),m_comState(COMSTATE_NORMAL)
 {
-    m_driverId   = id;
-    m_drivName = name;
-    m_comState    = COMSTATE_NORMAL;
 
+    memset(&m_driverInfo, 0x00, sizeof(m_driverInfo));
     m_pShm = new shm(shminkey, shmoutkey, shmoutsem, shmstatekey);
+    if(m_pShm == NULL)
+    {
+        zprintf1("driver new shm error!\n");
+    }
     m_pSendmsg = new MsgSendBase(msgkey);
-    m_heartMark = 0;
+    if(m_pSendmsg == NULL)
+    {
+        zprintf1("driver new MsgSendBase error!\n");
+    }
 }
 
 driver::~driver()

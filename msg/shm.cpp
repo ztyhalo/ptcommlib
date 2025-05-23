@@ -5,7 +5,6 @@ shm::shm(int inkey, int outkey, int outsem, int statekey):data_key(inkey),ctrl_k
       ctrl_semkey(outsem),state_key(statekey),data_cnt(0),m_pDataShm(NULL),m_pCtrlShm(NULL),
       m_pStateShm(NULL)
 {
-    ;
 }
 
 shm::~shm()

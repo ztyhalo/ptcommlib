@@ -5,22 +5,22 @@
 
 
 
-MsgMngBase::MsgMngBase()
-{
-    ;
-}
+// MsgMngBase::MsgMngBase()
+// {
+//     ;
+// }
 
-MsgMngBase::~MsgMngBase()
-{
-    zprintf3("msgmngbase destruct!\n");
-}
+// MsgMngBase::~MsgMngBase()
+// {
+//     zprintf3("msgmngbase destruct!\n");
+// }
 
-bool MsgMngBase::sendMsg(sMsgUnit *pdata, uint16_t size)
-{
-    bool ret;
-    ret = m_SendMsg.send_object(pdata, (int)(size+MSG_UNIT_HEAD_LEN), 1);
-    return ret;
-}
+// bool MsgMngBase::sendMsg(sMsgUnit *pdata, uint16_t size)
+// {
+//     bool ret;
+//     ret = m_SendMsg.send_object(pdata, (int)(size+MSG_UNIT_HEAD_LEN), 1);
+//     return ret;
+// }
 
 
 MsgKeyClass::MsgKeyClass():m_resMsgKey(0),m_minMsgKey(0),m_maxMsgKey(0),m_appMsgKey(0)
@@ -89,114 +89,264 @@ bool  MsgKeyClass::keyCheckInit(int size)
  * *************************************************************************************/
 
 
-MsgMngDriver* MsgMngDriver::m_pMsgMngDriver = NULL;
-MsgMngDriver* MsgMngDriver::GetMsgMngDriver()
+// MsgMngDriver* MsgMngDriver::m_pMsgMngDriver = NULL;
+// MsgMngDriver* MsgMngDriver::GetMsgMngDriver()
+// {
+//     if (m_pMsgMngDriver == NULL)
+//     {
+//         m_pMsgMngDriver = new MsgMngDriver();
+//     }
+//     return m_pMsgMngDriver;
+// }
+
+// MsgMngDriver::MsgMngDriver():dest_id(0),m_pDriver(NULL)
+// {
+//     soure_id.app = 0;
+// }
+
+// MsgMngDriver::~MsgMngDriver()
+// {
+//     zprintf3("MsgMngDriver destruct!\n");
+// }
+
+// bool MsgMngDriver::Init(int recvkey,int sendkey, PtDriverBase * pdriver)
+// {
+//     this->msg_init(recvkey, 1);
+//     if(!this->create_object())
+//     {
+//         zprintf1("MsgMngDriver create recvkey %d error!\n", recvkey);
+//         return false;
+//     }
+//     m_SendMsg.msg_init(sendkey, 1);
+
+//     if(!m_SendMsg.get_msg())
+//     {
+//         zprintf1("MsgMngDriver get sendkey %d error!\n", sendkey);
+//         if(!m_SendMsg.create_object())
+//         {
+//             zprintf1("MsgMngDriver create sendkey %d error!\n", sendkey);
+//             return false;
+//         }
+//     }
+//     m_pDriver = pdriver;
+//     this->start("MsgMngDriRev");
+
+//     return true;
+// }
+
+
+// void MsgMngDriver::msgRecvProcess(sMsgUnit pkt, int len)
+// {
+//     // sMsgUnit   pkt;
+//     uint16_t   pkt_len;
+//     uint32_t   addr;
+//     // Can_Data *pdriver = (Can_Data *) arg;
+//     zprintf1("msgmngdriver msg receiv pkt.dest.driver.id_driver %d driverid %d!\n", pkt.dest.driver.id_driver, m_pDriver->devkey.driverid);
+//     if((pkt.dest.driver.id_driver != m_pDriver->devkey.driverid) && (pkt.dest.app != BROADCAST_ID))
+//         return;
+
+//     switch(pkt.type)
+//     {
+//         case MSG_TYPE_DriverGetInfo:
+//             // uint8_t midchang ;
+//             soure_id.driver.id_driver = pkt.dest.driver.id_driver;
+
+//             dest_id = pkt.source.app;
+//             zprintf3("receive dest id is %d\n",dest_id);
+//             addr = pkt.dest.app;
+//             pkt.dest.app = pkt.source.app;
+//             pkt.source.app =addr;
+//             //            zprintf1("receive driver info id \n");
+//             zprintf1("msg driver totalincnt %d outcnt %d state%d!\n", m_pDriver->m_paramInfo.TotalInCnt, m_pDriver->m_paramInfo.TotalOutCnt,
+//                 m_pDriver->m_paramInfo.TotalStateCnt);
+//             memcpy(&pkt.data[0] ,&(m_pDriver->m_paramInfo), sizeof(sDriverInfoType));
+//             printf("sDriverInfoType %d!\n", sizeof(sDriverInfoType));
+//             printf("send 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x!\n", pkt.data[0],pkt.data[1],pkt.data[2],pkt.data[3],pkt.data[4],pkt.data[5]);
+//             pkt_len = sizeof(sDriverInfoType);
+
+//             sendMsg(&pkt, pkt_len);
+//             break;
+
+//         case MSG_TYPE_DriverSendHeart:
+
+//             addr = pkt.dest.app;
+//             pkt.dest.app = pkt.source.app;
+//             pkt.source.app =addr;
+//             // pSendMsg->SendMsg(&pkt,0);
+//             sendMsg(&pkt, 0);
+//             break;
+
+//         case MSG_TYPE_AppGetIOParam:
+//             addr = pkt.dest.app;
+//             pkt.dest.app = pkt.source.app;
+//             pkt.source.app =addr;
+//             // can_inode_info ininfo;
+//             // pdriver->get_innode_info(pkt.source.driver.id_parent, pkt.source.driver.id_child,
+//             //                          pkt.source.driver.id_point, ininfo);
+//             // memcpy(pkt.data, &ininfo,sizeof(ininfo));
+//             // pSendMsg->SendMsg(&pkt,sizeof(ininfo));
+//             break;
+
+
+//         default:
+//             break;
+//     }
+//     return;
+// }
+
+// void MsgMngDriver::msgmng_send_msg(sMsgUnit *pdata, uint16_t size)
+// {
+//     sendMsg(pdata, size);
+// }
+
+bool MsgWaitBase::checkWaitMsg(Type_MsgAddr waitid, uint16_t type)
 {
-    if (m_pMsgMngDriver == NULL)
+
+    m_waitMutex.lock();
+    lWaitList::iterator item = m_waitList.begin();
+    for (; item != m_waitList.end(); ++item)
     {
-        m_pMsgMngDriver = new MsgMngDriver();
+        if (((*item).type == type) && ((*item).waitid.app == waitid.app))
+        {
+            m_waitMutex.unlock();
+            return true;
+        }
     }
-    return m_pMsgMngDriver;
+    m_waitMutex.unlock();
+    return false;
 }
 
-MsgMngDriver::MsgMngDriver():dest_id(0),m_pDriver(NULL)
+bool MsgWaitBase::ackWaitMsg(Type_MsgAddr waitid, uint16_t type, uint8_t mode)
 {
-    soure_id.app = 0;
-}
 
-MsgMngDriver::~MsgMngDriver()
-{
-    zprintf3("MsgMngDriver destruct!\n");
-}
-
-bool MsgMngDriver::Init(int recvkey,int sendkey, PtDriverBase * pdriver)
-{
-    this->msg_init(recvkey, 1);
-    if(!this->create_object())
+    m_waitMutex.lock();
+    lWaitList::iterator item = m_waitList.begin();
+    for (; item != m_waitList.end(); ++item)
     {
-        zprintf1("MsgMngDriver create recvkey %d error!\n", recvkey);
+        if (((*item).type == type) && ((*item).waitid.app == waitid.app))
+        {
+            if (!mode)
+                sem_post((*item).pack);
+            m_waitList.erase(item);
+            m_waitMutex.unlock();
+            return true;
+        }
+    }
+    m_waitMutex.unlock();
+    return false;
+}
+
+bool MsgWaitBase::insertWaitMsg(sWaitMsg & waitmsg)
+{
+
+    // waitmsg.timeout_ms = (waitmsg.timeout_ms == 0) ? MSG_TIMEOUT_VALUE : waitmsg.timeout_ms;
+    m_waitMutex.lock();
+    if (m_waitList.size() < WAIT_MSG_MAX)
+    {
+        m_waitList.append(waitmsg);
+        m_waitMutex.unlock();
+        return true;
+    }
+    else
+    {
+        m_waitMutex.unlock();
         return false;
     }
-    m_SendMsg.msg_init(sendkey, 1);
+}
 
-    if(!m_SendMsg.get_msg())
+void MsgWaitBase::timerAddMS(struct timeval* a, uint32_t ms)
+{
+    a->tv_usec += ms * 1000;
+    if (a->tv_usec >= 1000000)
     {
-        zprintf1("MsgMngDriver get sendkey %d error!\n", sendkey);
-        if(!m_SendMsg.create_object())
+        a->tv_sec += a->tv_usec / 1000000;
+        a->tv_usec %= 1000000;
+    }
+}
+
+bool MsgWaitBase::waitTimeMsgAck(uint32_t waittime_ms, sWaitMsg* pmsg)
+{
+    struct timeval  now;
+    struct timespec outtime;
+    int             ret;
+
+    if (waittime_ms > 0)
+    {
+        gettimeofday(&now, NULL);
+
+        timerAddMS(&now, waittime_ms);
+
+        outtime.tv_sec  = now.tv_sec;
+        outtime.tv_nsec = now.tv_usec * 1000;
+
+        int count       = 0;
+        while (count < 5)
         {
-            zprintf1("MsgMngDriver create sendkey %d error!\n", sendkey);
+            ret = sem_timedwait(pmsg->pack, &outtime);
+            if (ret == -1)
+            {
+                zprintf3("LibDeviceMng WaitTimeMsgAck errno: %d coount %d!\n", errno ,count);
+            }
+            count++;
+            if (ret == -1 && errno == EINTR) // if sem_timedwait returns -1 and errno is EINTR, recall sem_timedwait
+            {
+                continue;
+            }
+            else
+                break;
+        }
+        if (ret == -1)
+        {
+            ackWaitMsg(pmsg->waitid, pmsg->type, 1);
             return false;
         }
     }
-    m_pDriver = pdriver;
-    this->start("MsgMngDriRev");
+    else
+    {
+        ret = sem_wait(pmsg->pack);
+        if (ret == -1)
+        {
+            ackWaitMsg(pmsg->waitid, pmsg->type, 1);
+            return false;
+        }
+    }
 
     return true;
 }
 
-
-void MsgMngDriver::msgRecvProcess(sMsgUnit pkt, int len)
+ackfunctype MsgWaitBase::getWaitFunc(Type_MsgAddr waitid, uint16_t type)
 {
-    // sMsgUnit   pkt;
-    uint16_t   pkt_len;
-    uint32_t   addr;
-    // Can_Data *pdriver = (Can_Data *) arg;
-    zprintf1("msgmngdriver msg receiv pkt.dest.driver.id_driver %d driverid %d!\n", pkt.dest.driver.id_driver, m_pDriver->devkey.driverid);
-    if((pkt.dest.driver.id_driver != m_pDriver->devkey.driverid) && (pkt.dest.app != BROADCAST_ID))
-        return;
-
-    switch(pkt.type)
+    m_waitMutex.lock();
+    lWaitList::iterator item = m_waitList.begin();
+    for (; item != m_waitList.end(); ++item)
     {
-        case MSG_TYPE_DriverGetInfo:
-            // uint8_t midchang ;
-            soure_id.driver.id_driver = pkt.dest.driver.id_driver;
-
-            dest_id = pkt.source.app;
-            zprintf3("receive dest id is %d\n",dest_id);
-            addr = pkt.dest.app;
-            pkt.dest.app = pkt.source.app;
-            pkt.source.app =addr;
-            //            zprintf1("receive driver info id \n");
-            zprintf1("msg driver totalincnt %d outcnt %d state%d!\n", m_pDriver->m_paramInfo.TotalInCnt, m_pDriver->m_paramInfo.TotalOutCnt,
-                m_pDriver->m_paramInfo.TotalStateCnt);
-            memcpy(&pkt.data[0] ,&(m_pDriver->m_paramInfo), sizeof(sDriverInfoType));
-            printf("sDriverInfoType %d!\n", sizeof(sDriverInfoType));
-            printf("send 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x!\n", pkt.data[0],pkt.data[1],pkt.data[2],pkt.data[3],pkt.data[4],pkt.data[5]);
-            pkt_len = sizeof(sDriverInfoType);
-
-            sendMsg(&pkt, pkt_len);
-            break;
-
-        case MSG_TYPE_DriverSendHeart:
-
-            addr = pkt.dest.app;
-            pkt.dest.app = pkt.source.app;
-            pkt.source.app =addr;
-            // pSendMsg->SendMsg(&pkt,0);
-            sendMsg(&pkt, 0);
-            break;
-
-        case MSG_TYPE_AppGetIOParam:
-            addr = pkt.dest.app;
-            pkt.dest.app = pkt.source.app;
-            pkt.source.app =addr;
-            // can_inode_info ininfo;
-            // pdriver->get_innode_info(pkt.source.driver.id_parent, pkt.source.driver.id_child,
-            //                          pkt.source.driver.id_point, ininfo);
-            // memcpy(pkt.data, &ininfo,sizeof(ininfo));
-            // pSendMsg->SendMsg(&pkt,sizeof(ininfo));
-            break;
-
-
-        default:
-            break;
+        if (((*item).type == type) && ((*item).waitid.app == waitid.app))
+        {
+            m_waitMutex.unlock();
+            return (*item).ackfunc;
+        }
     }
-    return;
+    m_waitMutex.unlock();
+    return 0;
 }
 
-void MsgMngDriver::msgmng_send_msg(sMsgUnit *pdata, uint16_t size)
+void MsgWaitBase::checkTimeoutMsg(uint16_t intervaltime)
 {
-    sendMsg(pdata, size);
+    m_waitMutex.lock();
+    lWaitList::iterator item = m_waitList.begin();
+    for (; item != m_waitList.end(); )
+    {
+        if ((*item).timeout_ms <= intervaltime)
+        {
+            item = m_waitList.erase(item);
+        }
+        else
+        {
+            (*item).timeout_ms = (*item).timeout_ms - intervaltime;
+            ++item;
+        }
+    }
+    m_waitMutex.unlock();
 }
 
 /*-----------------------------------------------------------------------------------------------------------------------------*/
@@ -865,4 +1015,118 @@ bool MsgMngApp::initGetInfo(int driver_id, uint32_t timeout_ms)
 
     return waitDriverInfo(pkt);
 
+}
+
+bool MsgMngApp::wait_msg(sMsgUnit* recvmsg, uint16_t* msglen, eWaitMsgType mode)
+{
+    int                   ret;
+    
+
+    if (mode == WAIT_MSG_BLOCK)
+    {
+        ret = sem_wait(&m_notifySem);
+    }
+    else
+    {
+        ret = sem_trywait(&m_notifySem);
+    }
+
+    if (ret < 0)
+    {
+        zprintf1("LibDeviceMng sem_trywait  ret <0!\n");
+        return false;
+    }
+
+    if (m_notifyList.size() <= 0)
+    {
+        zprintf1("LibDeviceMng  m_notifyList.size() = %d!\n", m_notifyList.size());
+        return false;
+    }
+
+    if(recvmsg != NULL && msglen != NULL)
+    {
+
+        m_notifyMutex.lock();
+        lNotifyList::iterator item = m_notifyList.begin();
+
+        memcpy(recvmsg, &((*item).MsgData), sizeof(sMsgUnit));
+        *msglen = (*item).MsgLen;
+        m_notifyList.erase(item);
+        m_notifyMutex.unlock();
+        return true;
+    }
+    else
+    {
+        zprintf1("recvmsg NULL or msglen NULL error!\n");
+        return false;
+    }
+
+}
+
+bool MsgMngApp::sendMail(sMsgUnit& pkt, uint16_t pkt_len, ackfunctype func, uint32_t timeout)
+{
+    sWaitMsg msg;
+
+    msg.waitid     = pkt.dest;
+    msg.type       = pkt.type;
+    msg.pack       = 0;
+    msg.timeout_ms = (timeout == 0) ? MSG_TIMEOUT_VALUE : timeout;
+    msg.ackfunc    = func;
+    if(insertWaitMsg(msg))
+    {
+        if(m_sendToServMsg.sendMsg(&pkt, pkt_len))
+            return true;
+        else
+        {
+            zprintf1("msgmng app send mail error!\n");
+            return false;
+        }
+    }
+    else
+        return false;
+}
+
+bool MsgMngApp::msgSendProcess(Type_MsgAddr& addr, uint16_t msgtype, ackfunctype func, uint8_t* pdata, uint16_t len)
+{
+    sMsgUnit pkt;
+    bool     ret = true;
+
+    memset(&pkt, 0, sizeof(sMsgUnit));
+    switch (msgtype)
+    {
+        case MSG_TYPE_AppLogOut:
+            pkt.source.app = GET_APP_ID;
+            pkt.dest.app   = m_deviceMngId;
+            pkt.type       = MSG_TYPE_AppLogOut;
+            sendMail(pkt, 0, func, 0);
+            // cancel = true;
+
+            break;
+
+        case MSG_TYPE_AppGetIOParam:
+            pkt.source.app = GET_APP_ID;
+            pkt.dest.app   = addr.app;
+            pkt.type       = MSG_TYPE_AppGetIOParam;
+            sendMail(pkt, 0, func, 0);
+            break;
+
+        case MSG_TYPE_AppSetIOParam:
+            pkt.source.app = GET_APP_ID;
+            pkt.dest.app   = addr.app;
+            pkt.type       = MSG_TYPE_AppSetIOParam;
+            memcpy(pkt.data, pdata, len);
+            sendMail(pkt, len, func, 0);
+            break;
+
+        case MSG_TYPE_DriverGetInfo:
+            pkt.source.app = GET_APP_ID;
+            pkt.dest.app   = addr.app;
+            pkt.type       = MSG_TYPE_DriverGetInfo;
+            sendMail(pkt, 0, func, 0);
+            break;
+
+        default:
+            break;
+    }
+    return ret;
 }

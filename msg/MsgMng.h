@@ -20,6 +20,9 @@
 #define LOGIN_ACK_MSG_LEN    9
 #define ABNORMAL_MSG_LEN 1
 
+#define MSG_TIMEOUT_VALUE    2000
+#define MSG_CHECK_TIME       100
+
 #define DEVICEMNG_SHARE_KEY_NUM 4 // 消息占用4个key
 #define DRIVER_SHARE_KEY_NUM    5 // 每个驱动占用5个key
 
@@ -60,36 +63,67 @@ class MsgKeyClass
 };
 
 
-class MsgMngBase :public MsgRevClass<sMsgUnit>
+// class MsgMngBase :public MsgRevClass<sMsgUnit>
+// {
+// public:
+//     Z_Msg<sMsgUnit> m_SendMsg;
+// public:
+//     MsgMngBase();
+//     virtual ~MsgMngBase();
+//     bool sendMsg(sMsgUnit *pdata,   uint16_t size);
+//     // bool receiveMsg(sMsgUnit *pdata, uint16_t *psize, int mode);
+// };
+
+
+// //驱动消息管理类
+// class MsgMngDriver: public MsgMngBase
+// {
+// private:
+//     MsgMngDriver();
+// public:
+//     Type_MsgAddr    soure_id;
+//     uint32_t        dest_id;
+//     PtDriverBase *  m_pDriver;
+
+
+// public:
+//     static MsgMngDriver * GetMsgMngDriver(void);
+//     static MsgMngDriver  * m_pMsgMngDriver;
+//     ~MsgMngDriver();
+//     bool Init(int recvkey,int sendkey, PtDriverBase * pdriver);
+//     void msgRecvProcess(sMsgUnit val, int len) override;
+//     void msgmng_send_msg(sMsgUnit *pdata, uint16_t size);
+// };
+
+typedef int (*ackfunctype)(void* pdata, unsigned int len);
+
+typedef struct
+{
+    Type_MsgAddr waitid;
+    uint16_t     type;
+    sem_t*       pack;
+    uint32_t     timeout_ms;
+    ackfunctype  ackfunc;
+} sWaitMsg;
+
+typedef QList< sWaitMsg >         lWaitList;
+class MsgWaitBase
 {
 public:
-    Z_Msg<sMsgUnit> m_SendMsg;
-public:
-    MsgMngBase();
-    virtual ~MsgMngBase();
-    bool sendMsg(sMsgUnit *pdata,   uint16_t size);
-    // bool receiveMsg(sMsgUnit *pdata, uint16_t *psize, int mode);
-};
+    lWaitList       m_waitList;
+    MUTEX_CLASS     m_waitMutex;
+  public:
+    MsgWaitBase();
+    ~MsgWaitBase();
 
+    bool        checkWaitMsg(Type_MsgAddr waitid, uint16_t type);
+    bool        ackWaitMsg(Type_MsgAddr waitid, uint16_t type, uint8_t mode);
+    bool        insertWaitMsg(sWaitMsg & waitmsg);
+    void        timerAddMS(struct timeval* a, uint32_t ms);
+    bool        waitTimeMsgAck(uint32_t waittime_ms, sWaitMsg* pmsg);
+    ackfunctype getWaitFunc(Type_MsgAddr waitid, uint16_t type);
+    void        checkTimeoutMsg(uint16_t intervaltime);
 
-//驱动消息管理类
-class MsgMngDriver: public MsgMngBase
-{
-private:
-    MsgMngDriver();
-public:
-    Type_MsgAddr    soure_id;
-    uint32_t        dest_id;
-    PtDriverBase *  m_pDriver;
-
-
-public:
-    static MsgMngDriver * GetMsgMngDriver(void);
-    static MsgMngDriver  * m_pMsgMngDriver;
-    ~MsgMngDriver();
-    bool Init(int recvkey,int sendkey, PtDriverBase * pdriver);
-    void msgRecvProcess(sMsgUnit val, int len) override;
-    void msgmng_send_msg(sMsgUnit *pdata, uint16_t size);
 };
 
 //消息管理服务类
@@ -129,8 +163,15 @@ public:
 
 };
 
+
+typedef enum
+{
+    WAIT_MSG_BLOCK = 0,
+    WAIT_MSG_UNBLOCK
+} eWaitMsgType;
+
 //消息应用app类
-class MsgMngApp:public MsgKeyClass
+class MsgMngApp:public MsgKeyClass,public MsgWaitBase
 {
 private:
         MsgMngApp();
@@ -165,6 +206,9 @@ public:
     bool waitDriverInfo(sMsgUnit & pkt);
     bool initRecvMail(void);
     bool initGetInfo(int driver_id, uint32_t timeout_ms);
+    bool wait_msg(sMsgUnit* recvmsg, uint16_t* msglen, eWaitMsgType mode);
+    bool sendMail(sMsgUnit& pkt, uint16_t pkt_len, ackfunctype func, uint32_t timeout);
+    bool msgSendProcess(Type_MsgAddr& addr, uint16_t msgtype, ackfunctype func, uint8_t* pdata, uint16_t len);
     void setIsRecv(bool isRecv)
     {
         m_isRecv = isRecv;

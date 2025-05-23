@@ -12,11 +12,7 @@ typedef enum
     PARAM_EFFECT_MOMENT
 } eEffectType;
 
-typedef enum
-{
-    WAIT_MSG_BLOCK = 0,
-    WAIT_MSG_UNBLOCK
-} eWaitMsgType;
+
 
 #define GET_SYS_TIME_MS(x)                                                                                             \
 {                                                                                                                  \

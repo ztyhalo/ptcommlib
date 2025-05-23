@@ -29,8 +29,8 @@ void* ProcessMsg_task(void*)
         }
         else
         {
-            lProcessList::iterator item;
-            for (item = pApi->processList.begin(); item != pApi->processList.end(); ++item)
+            lProcessList::iterator item = pApi->processList.begin();
+            for (; item != pApi->processList.end(); ++item)
             {
                 if (((*item).type == processmsgdata.type) &&
                     ((*item).driverid == processmsgdata.source.driver.id_driver))
@@ -56,7 +56,7 @@ int DeviceMngApi::init_data(uint32_t waittime_ms, uint8_t select, bool isRecv)
 
     zprintf1("LibDeviceMng init_data begin:\n");
     m_pAppDevMng = DeviceMngApp::getDeviceMngApp();
-    // m_pMsgMngApp    = MsgMngApp::getMsgMngApp();
+
     m_pAppDevMng->m_pMngApp->setIsRecv(isRecv);            //干什么用的
 
     struct timeval start, end;
@@ -135,7 +135,8 @@ double* DeviceMngApi::get_data_point(uint32_t AppId)
         return NULL;
     }
 
-    // pvalue = pdriver->GetDataPoint(ParentDeviceId, ChildDeviceId, PointId, type);
+    // pvalue = pdriver->m_pShm->getDataPoint(ParentDeviceId, ChildDeviceId, PointId, type);
+    pvalue = pdriver->m_pShm->shm_get_datapoint(ParentDeviceId, ChildDeviceId, PointId, type);
     return pvalue;
 }
 
@@ -259,8 +260,8 @@ bool DeviceMngApi::get_param(uint32_t AppId, backcallfunc func)
     bool         ret;
     Type_MsgAddr addr;
 
-    // addr.app = AppId;
-    // ret      = m_pAppDevMng->m_pMngApp->MsgSendProcess(addr, MSG_TYPE_AppGetIOParam, (ackfunctype) func, NULL, 0);
+    addr.app = AppId;
+    ret      = m_pAppDevMng->m_pMngApp->msgSendProcess(addr, MSG_TYPE_AppGetIOParam, (ackfunctype) func, NULL, 0);
     return ret;
 }
 
@@ -274,7 +275,7 @@ bool DeviceMngApi::set_param(uint32_t AppId, void* paramlist, uint16_t len, eEff
     len      = (len < MSG_UNIT_LENGTH) ? len : MSG_UNIT_LENGTH - 1;
     data[0]  = mode;
     memcpy(&data[1], (uint8_t*) paramlist, len);
-    // ret = pMsgMng->MsgSendProcess(addr, MSG_TYPE_AppSetIOParam, (ackfunctype) func, data, len + 1);
+    ret = m_pAppDevMng->m_pMngApp->msgSendProcess(addr, MSG_TYPE_AppSetIOParam, (ackfunctype) func, data, len + 1);
     return ret;
 }
 
@@ -285,44 +286,13 @@ bool DeviceMngApi::get_deviceinfo(uint8_t DriverId, backcallfunc func)
 
     addr.app              = 0;
     addr.driver.id_driver = DriverId;
-    // ret                   = pMsgMng->MsgSendProcess(addr, MSG_TYPE_DriverGetInfo, (ackfunctype) func, NULL, 0);
+    ret = m_pAppDevMng->m_pMngApp->msgSendProcess(addr, MSG_TYPE_DriverGetInfo, (ackfunctype) func, NULL, 0);
     return ret;
 }
 
 bool DeviceMngApi::wait_msg(sMsgUnit* recvmsg, uint16_t* msglen, eWaitMsgType mode)
 {
-    int                   ret;
-    lNotifyList::iterator item;
-
-    if (mode == WAIT_MSG_BLOCK)
-    {
-        ret = sem_wait(&m_pAppDevMng->m_pMngApp->m_notifySem);
-    }
-    else
-    {
-        ret = sem_trywait(&m_pAppDevMng->m_pMngApp->m_notifySem);
-    }
-
-    if (ret < 0)
-    {
-        zprintf1("LibDeviceMng sem_trywait  ret <0!\n");
-        return false;
-    }
-
-    if (m_pAppDevMng->m_pMngApp->m_notifyList.size() <= 0)
-    {
-        zprintf1("LibDeviceMng  pMsgMng->NotifyList.size() = %d!\n" ,m_pAppDevMng->m_pMngApp->m_notifyList.size());
-        return false;
-    }
-
-    m_pAppDevMng->m_pMngApp->m_notifyMutex.lock();
-    item = m_pAppDevMng->m_pMngApp->m_notifyList.begin();
-    memcpy(recvmsg, &((*item).MsgData), sizeof(sMsgUnit));
-    *msglen = (*item).MsgLen;
-    m_pAppDevMng->m_pMngApp->m_notifyList.erase(item);
-    m_pAppDevMng->m_pMngApp->m_notifyMutex.unlock();
-
-    return true;
+    return m_pAppDevMng->m_pMngApp->wait_msg(recvmsg, msglen, mode);
 }
 
 bool DeviceMngApi::read_state(uint8_t DriverId, int childid, char* value, uint16_t len)
