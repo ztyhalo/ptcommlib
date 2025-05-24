@@ -1,7 +1,7 @@
-#ifndef DRIVERMSGMNG_H
-#define DRIVERMSGMNG_H
+#ifndef DRIVMSGMNG_H
+#define DRIVMSGMNG_H
 
-#include "msg.h"
+#include "msgbase.h"
 #include "driver.h"
 
 
@@ -18,10 +18,10 @@ class MsgMngBase :public MsgRevClass<sMsgUnit>
 
 
 //驱动消息管理类
-class DriverMsgMng: public MsgMngBase
+class DrivMsgMng: public MsgMngBase
 {
   private:
-    MsgMngDriver();
+    DrivMsgMng();
   public:
     Type_MsgAddr    soure_id;
     uint32_t        dest_id;
@@ -29,12 +29,12 @@ class DriverMsgMng: public MsgMngBase
 
 
   public:
-    static DriverMsgMng * getDrivMsgMng(void);
-    static DriverMsgMng  * m_pDrivMsgMng;
-    ~DriverMsgMng();
+    static DrivMsgMng * getDrivMsgMng(void);
+    static DrivMsgMng  * m_pDrivMsgMng;
+    ~DrivMsgMng();
     bool init(int recvkey,int sendkey, PtDriverBase * pdriver);
     void msgRecvProcess(sMsgUnit val, int len) override;
-    void msgmng_send_msg(sMsgUnit *pdata, uint16_t size);
+    void driverSendMsg(sMsgUnit *pdata, uint16_t size);
 };
 
-#endif // DRIVERMSGMNG_H
+#endif // DRIVMSGMNG_H

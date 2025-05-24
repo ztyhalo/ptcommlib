@@ -1,4 +1,4 @@
-#include "drivermsgmng.h"
+#include "drivmsgmng.h"
 
 
 MsgMngBase::MsgMngBase()
@@ -23,27 +23,27 @@ bool MsgMngBase::sendMsg(sMsgUnit *pdata, uint16_t size)
  * *************************************************************************************/
 
 
-MsgMngDriver* MsgMngDriver::m_pMsgMngDriver = NULL;
-MsgMngDriver* MsgMngDriver::GetMsgMngDriver()
+DrivMsgMng* DrivMsgMng::m_pDrivMsgMng = NULL;
+DrivMsgMng* DrivMsgMng::getDrivMsgMng()
 {
-    if (m_pMsgMngDriver == NULL)
+    if (m_pDrivMsgMng == NULL)
     {
-        m_pMsgMngDriver = new MsgMngDriver();
+        m_pDrivMsgMng = new DrivMsgMng();
     }
-    return m_pMsgMngDriver;
+    return m_pDrivMsgMng;
 }
 
-MsgMngDriver::MsgMngDriver():dest_id(0),m_pDriver(NULL)
+DrivMsgMng::DrivMsgMng():dest_id(0),m_pDriver(NULL)
 {
     soure_id.app = 0;
 }
 
-MsgMngDriver::~MsgMngDriver()
+DrivMsgMng::~DrivMsgMng()
 {
     zprintf3("MsgMngDriver destruct!\n");
 }
 
-bool MsgMngDriver::Init(int recvkey,int sendkey, PtDriverBase * pdriver)
+bool DrivMsgMng::init(int recvkey,int sendkey, PtDriverBase * pdriver)
 {
     this->msg_init(recvkey, 1);
     if(!this->create_object())
@@ -69,7 +69,7 @@ bool MsgMngDriver::Init(int recvkey,int sendkey, PtDriverBase * pdriver)
 }
 
 
-void MsgMngDriver::msgRecvProcess(sMsgUnit pkt, int len)
+void DrivMsgMng::msgRecvProcess(sMsgUnit pkt, int len)
 {
     // sMsgUnit   pkt;
     uint16_t   pkt_len;
@@ -128,7 +128,7 @@ void MsgMngDriver::msgRecvProcess(sMsgUnit pkt, int len)
     return;
 }
 
-void MsgMngDriver::msgmng_send_msg(sMsgUnit *pdata, uint16_t size)
+void DrivMsgMng::driverSendMsg(sMsgUnit *pdata, uint16_t size)
 {
     sendMsg(pdata, size);
 }

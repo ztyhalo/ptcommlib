@@ -2,7 +2,7 @@
 #define APP_H
 
 #include <QObject>
-#include "msg.h"
+#include "msgbase.h"
 
 class app
 {
@@ -10,7 +10,6 @@ class app
     uint32_t m_appId;
 
   public:
-    // msg* m_pMsg;
     int             m_key;
     MsgSendBase *   m_pMsg;
     bool            m_isRecv;

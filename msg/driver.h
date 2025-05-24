@@ -4,7 +4,7 @@
 #include <QObject>
 #include <semaphore.h>
 #include "shm.h"
-#include "msg.h"
+#include "msgbase.h"
 
 typedef struct
 {

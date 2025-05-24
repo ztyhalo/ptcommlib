@@ -25,9 +25,11 @@ SOURCES += \
     msg/DeviceMngApi.cpp \
     msg/MsgMng.cpp \
     msg/app.cpp \
+    msg/appmsgmng.cpp \
     msg/driver.cpp \
-    msg/drivermsgmng.cpp \
-    msg/msg.cpp \
+    msg/drivmsgmng.cpp \
+    msg/msgbase.cpp \
+    msg/msgmngbase.cpp \
     msg/shm.cpp \
     ptdriver/ptdrivercommon.cpp
 
@@ -37,10 +39,12 @@ HEADERS += \
     msg/DeviceMngApi.h \
     msg/MsgMng.h \
     msg/app.h \
+    msg/appmsgmng.h \
     msg/define.h \
     msg/driver.h \
-    msg/drivermsgmng.h \
-    msg/msg.h \
+    msg/drivmsgmng.h \
+    msg/msgbase.h \
+    msg/msgmngbase.h \
     msg/msgtype.h \
     msg/shm.h \
     ptdriver/ptdrivercommon.h

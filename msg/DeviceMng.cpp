@@ -178,7 +178,7 @@ bool DeviceMng::SetupDriver(void)
         cfg.name = CfgList.at(i).name;
         pdriver  = new driver(cfg.id, cfg.name, keytemp, keytemp + 1, keytemp + 2, keytemp + 3, keytemp + 4);
 
-        m_pMngServ->m_driverTable.insert(cfg.id, pdriver);
+        m_pMngServ->m_drivMap.insert(cfg.id, pdriver);
         if (!pdriver->initMsg())
             return false;
 
@@ -218,23 +218,16 @@ bool DeviceMng::SetupDriver(void)
 
 void DeviceMng::SendHeartToDriver(void)
 {
-    mDriverTable::iterator item;
-
-    m_pMngServ->m_recvDriMsg.lock();
-    for (item = m_pMngServ->m_driverTable.begin(); item != m_pMngServ->m_driverTable.end(); ++item)
-    {
-        item.value()->msgSendHeart();
-    }
-    m_pMngServ->m_recvDriMsg.unlock();
+    m_pMngServ->sendHeartToDriver();
 }
 
 void DeviceMng::DriverHeartMng(void)
 {
     // int                    ret;
-    mDriverTable::iterator item;
+    mDrivMap::iterator item;
     uint8_t                data;
 
-    for (item = m_pMngServ->m_driverTable.begin(); item != m_pMngServ->m_driverTable.end(); ++item)
+    for (item = m_pMngServ->m_drivMap.begin(); item != m_pMngServ->m_drivMap.end(); ++item)
     {
         if(item.value()->m_heartMark) //心跳错误
         {
@@ -280,7 +273,7 @@ DeviceMngApp* DeviceMngApp::getDeviceMngApp()
 DeviceMngApp::DeviceMngApp()
 {
     CfgList.clear();
-    m_pMngApp = MsgMngApp::getMsgMngApp();
+    m_pMngApp = AppMsgMng::getMsgMngApp();
     this->deviceMngBaseInit(m_pMngApp);
 }
 DeviceMngApp::~DeviceMngApp()
@@ -306,7 +299,7 @@ bool DeviceMngApp::setupDriver(uint32_t timeout)
 
         // pdriver = new driver(cfg.id, cfg.name, keytemp, keytemp + 1, keytemp + 2, keytemp + 4);
         pdriver  = new driver(cfg.id, cfg.name, keytemp, keytemp + 1, keytemp + 2, keytemp + 3, keytemp + 4);
-        m_pMngApp->m_driverTable.insert(cfg.id, pdriver);
+        m_pMngApp->m_drivMap.insert(cfg.id, pdriver);
         if (!m_pMngApp->initGetInfo(cfg.id, timeout))
         {
             gettimeofday(&tv, NULL);

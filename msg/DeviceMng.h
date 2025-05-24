@@ -5,8 +5,9 @@
 #include <QDomDocument>
 #include <QFile>
 #include <QMap>
-#include "driver.h"
+// #include "driver.h"
 #include "MsgMng.h"
+#include "appmsgmng.h"
 #include <QSettings>
 
 #ifdef I386
@@ -78,7 +79,7 @@ class DeviceMngApp:public DeviceMngBase
 
   public:
 
-    MsgMngApp *    m_pMngApp;
+    AppMsgMng *          m_pMngApp;
 
     static DeviceMngApp* pAppCmd;
 
