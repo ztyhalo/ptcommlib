@@ -11,8 +11,12 @@ driver::driver(int id, QString& name, int shminkey, int shmoutkey, int shmoutsem
     {
         zprintf1("driver new shm error!\n");
     }
-    m_pSendmsg = new MsgSendBase(msgkey);
-    if(m_pSendmsg == NULL)
+    m_pSendmsg = new MsgSendBase();
+    if(m_pSendmsg != NULL)
+    {
+        m_pSendmsg->msg_init(msgkey, 1);
+    }
+    else
     {
         zprintf1("driver new MsgSendBase error!\n");
     }
@@ -58,6 +62,10 @@ bool driver::msgGetInfo(void)
 {
     sMsgUnit pkt;
 
+    while(m_pSendmsg->get_msg() ==false)
+    {
+        MSLEEP(50);
+    }
 
     memset(&pkt, 0, sizeof(sMsgUnit));
     pkt.source.app            = GET_DEVMNG_ID;

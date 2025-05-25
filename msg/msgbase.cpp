@@ -87,6 +87,16 @@ bool  MsgKeyClass::keyCheckInit(int size)
 
 }
 
+
+MsgWaitBase::MsgWaitBase()
+{
+    ;
+}
+MsgWaitBase::~MsgWaitBase()
+{
+    zprintf3("MsgWaitBase destruct!\n");
+}
+
 bool MsgWaitBase::checkWaitMsg(Type_MsgAddr waitid, uint16_t type)
 {
 

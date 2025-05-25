@@ -74,7 +74,7 @@ public:
     MUTEX_CLASS     m_waitMutex;
 public:
     MsgWaitBase();
-    ~MsgWaitBase();
+    virtual ~MsgWaitBase();
 
     bool        checkWaitMsg(Type_MsgAddr waitid, uint16_t type);
     bool        ackWaitMsg(Type_MsgAddr waitid, uint16_t type, uint8_t mode);

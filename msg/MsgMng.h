@@ -34,11 +34,11 @@ private:
 
 public:
 
-    MsgRevBackClass<sMsgUnit, MsgMngServer> m_recvDriMsg;
-    MsgRevBackClass<sMsgUnit, MsgMngServer> m_recvAppMsg;
-    MsgSendBase                             m_sendToAppMsg;
+    MsgRevBackClass<sMsgUnit, MsgMngServer> m_recvDriMsg;   //key:31
+    MsgRevBackClass<sMsgUnit, MsgMngServer> m_recvAppMsg;   //key:30
+    MsgSendBase                             m_sendToAppMsg; //key:32
 
-    bool                    cancel;
+    bool                    m_cancel;
     static MsgMngServer*    m_pMsgMngServ;
 
     static MsgMngServer*    GetMsgMngServer(void);
@@ -52,6 +52,7 @@ public:
     void startRecvAppMsgProcess(void);
     bool isProcessExists(qint64 pid);
     void sendHeartToDriver(void);
+    bool broadcastToApp(uint16_t type, uint8_t* data, uint16_t len);
 
 };
 

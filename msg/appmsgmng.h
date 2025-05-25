@@ -27,9 +27,9 @@ public:
 
 
     LSystemSem*                             m_pInitSem;
-    Z_Msg<sMsgUnit>                         m_recvServMsg;   //通用注册消息，通过此消息接收m_appRecvMsg的key值
+    Z_Msg<sMsgUnit>                         m_recvServMsg;   //key:32 通用注册消息，通过此消息接收m_appRecvMsg的key值
     MsgRevBackClass<sMsgUnit, AppMsgMng>    m_appRecvMsg;    //服务器创建的消息，app接收消息key
-    MsgSendBase                             m_sendToServMsg;
+    MsgSendBase                             m_sendToServMsg;  //key 30
 
     int                                     m_loginOkFlag;
     unsigned int                            m_deviceMngId;
@@ -60,6 +60,7 @@ public:
     {
         m_isRecv = isRecv;
     }
+    int appStartRecvMsg(void);
 
 };
 

@@ -18,7 +18,7 @@ MsgMngServer* MsgMngServer::GetMsgMngServer()
     return m_pMsgMngServ;
 }
 
-MsgMngServer::MsgMngServer():m_pInitSem(NULL)
+MsgMngServer::MsgMngServer():m_pInitSem(NULL),m_cancel(false)
 {
     ;
 }
@@ -36,6 +36,18 @@ MsgMngServer::~MsgMngServer()
         }
     }
     m_drivMap.clear();
+
+    mAppMap::iterator appit;
+    for(appit = m_appMap.begin(); appit != m_appMap.end(); ++appit)
+    {
+        if(appit.value() != NULL)
+        {
+            delete appit.value();
+            appit.value() = NULL;
+        }
+    }
+    m_appMap.clear();
+
     DELETE(m_pInitSem);
     m_pMsgMngServ = NULL;
 }
@@ -213,17 +225,18 @@ int  servRecvAppBack(MsgMngServer * pro,  sMsgUnit pkt, int len)
         if (!pro->findApp(pkt.source.app, &papp))
             break;
 
-        if (!pro->findDriver(pkt.dest.driver.id_driver, &pdriver))
+        if (pro->findDriver(pkt.dest.driver.id_driver, &pdriver))
+        {
+            pdriver->m_pSendmsg->sendMsg(&pkt, len);
+        }
+        else
         {
             pkt.dest.app   = pkt.source.app;
             pkt.source.app = GET_DEVMNG_ID;
             pkt.data[0]    = MSG_ERROR_Driver_NotExist;
             papp->m_pMsg->sendMsg(&pkt, ABNORMAL_MSG_LEN);
         }
-        else
-        {
-            pdriver->m_pSendmsg->sendMsg(&pkt, len);
-        }
+
         break;
     }
     return 0;
@@ -353,6 +366,25 @@ void MsgMngServer::sendHeartToDriver(void)
         item.value()->msgSendHeart();
     }
 
+}
+
+bool MsgMngServer::broadcastToApp(uint16_t type, uint8_t* data, uint16_t len)
+{
+    sMsgUnit            pkt;
+    mAppMap::iterator   item;
+
+    if ((len > MSG_UNIT_LENGTH) || (data == NULL))
+        return false;
+
+    pkt.source.app = GET_DEVMNG_ID;
+    pkt.type       = type;
+    memcpy(&pkt.data[0], data, len);
+    for (item = m_appMap.begin(); item != m_appMap.end(); ++item)
+    {
+        pkt.dest.app = item.key();
+        item.value()->m_pMsg->sendMsg(&pkt, len);
+    }
+    return true;
 }
 
 

@@ -1,4 +1,5 @@
 #include "appmsgmng.h"
+#include <mutex>
 
 /*-----------------------------------------------------------------------------------------------------------------------------*/
 //MsgMngApp类
@@ -14,22 +15,46 @@ AppMsgMng* AppMsgMng::getMsgMngApp()
     return m_pMsgMngApp;
 }
 
-AppMsgMng::AppMsgMng()
+AppMsgMng::AppMsgMng():m_pInitSem(NULL),m_loginOkFlag(0),m_deviceMngId(BROADCAST_ID),m_isRecv(0),m_loginKeyId(0)
 {
-    m_deviceMngId = BROADCAST_ID;
-    sem_init(&m_notifySem, 0, 0);
 
+    sem_init(&m_notifySem, 0, 0);
 }
 
 AppMsgMng::~AppMsgMng()
 {
-    ;
+    zprintf3("MsgMngServer destruct!\n");
+    lock_guard<MUTEX_CLASS> lock(m_mapMutex);
+    QMap< int,  driver * >::iterator it;
+    for(it = m_drivMap.begin(); it != m_drivMap.end(); ++it)
+    {
+        if(it.value() != NULL)
+        {
+            delete it.value();
+            it.value() = NULL;
+        }
+    }
+    m_drivMap.clear();
+
+    mAppMap::iterator appit;
+    for(appit = m_appMap.begin(); appit != m_appMap.end(); ++appit)
+    {
+        if(appit.value() != NULL)
+        {
+            delete appit.value();
+            appit.value() = NULL;
+        }
+    }
+    m_appMap.clear();
+
+    DELETE(m_pInitSem);
+    m_pMsgMngApp = NULL;
 }
 
 /***********************************************************************************************
  * senkey: app send msg to server       30
  * totalkey:app receive msg from server 32
- * totalmutexkey:
+ * totalmutexkey:  互斥信号量             33
  *
  * **********************************************************************************************/
 
@@ -166,7 +191,7 @@ bool AppMsgMng::loginRecvMail(void)
     return true;
 }
 
-int  msgmngapp_apprecv_back(AppMsgMng * pro,  sMsgUnit pkt, int len)
+int  appRecvMsgBack(AppMsgMng * pro,  sMsgUnit pkt, int len)
 {
 
     // driver*     pdriver;
@@ -379,4 +404,8 @@ bool AppMsgMng::msgSendProcess(Type_MsgAddr& addr, uint16_t msgtype, ackfunctype
         break;
     }
     return ret;
+}
+int AppMsgMng::appStartRecvMsg(void)
+{
+    return m_appRecvMsg.msgPthreadInit(appRecvMsgBack, this, "AppRecvMsg");
 }

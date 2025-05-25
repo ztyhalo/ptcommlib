@@ -1,6 +1,15 @@
 #include "msgmngbase.h"
 #include <mutex>
 
+DrivAppMap::DrivAppMap()
+{
+
+}
+DrivAppMap::~DrivAppMap()
+{
+    zprintf3("DrivAppMap destruct!\n");
+}
+
 bool DrivAppMap::findApp(uint32_t id, app** ppapp)
 {
     mAppMap::iterator item;

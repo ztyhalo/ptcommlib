@@ -22,10 +22,10 @@ INCLUDEPATH += .\
 
 SOURCES += \
     msg/DeviceMng.cpp \
-    msg/DeviceMngApi.cpp \
     msg/MsgMng.cpp \
     msg/app.cpp \
     msg/appmsgmng.cpp \
+    msg/devicemngapi.cpp \
     msg/driver.cpp \
     msg/drivmsgmng.cpp \
     msg/msgbase.cpp \
@@ -36,11 +36,11 @@ SOURCES += \
 
 HEADERS += \
     msg/DeviceMng.h \
-    msg/DeviceMngApi.h \
     msg/MsgMng.h \
     msg/app.h \
     msg/appmsgmng.h \
     msg/define.h \
+    msg/devicemngapi.h \
     msg/driver.h \
     msg/drivmsgmng.h \
     msg/msgbase.h \

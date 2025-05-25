@@ -1,5 +1,6 @@
 #include "DeviceMng.h"
 #include "MsgMng.h"
+#include <mutex>
 
 DeviceMngBase::DeviceMngBase():m_initOk(false),m_pKey(NULL)
 {
@@ -179,8 +180,8 @@ bool DeviceMng::SetupDriver(void)
         pdriver  = new driver(cfg.id, cfg.name, keytemp, keytemp + 1, keytemp + 2, keytemp + 3, keytemp + 4);
 
         m_pMngServ->m_drivMap.insert(cfg.id, pdriver);
-        if (!pdriver->initMsg())
-            return false;
+        // if (!pdriver->initMsg())
+        //     return false;
 
         cfg.script = CfgList.at(i).script;
         ShellSetupDriver(
@@ -199,12 +200,12 @@ bool DeviceMng::SetupDriver(void)
         }
 
 
-        if (!pdriver->init())
-        {
-            gettimeofday(&tv, NULL);
-            zprintf1("DeviceMng device[%d] Initmem error time: %d!\n", cfg.id , tv.tv_sec);
-            return false;
-        }
+        // if (!pdriver->init())
+        // {
+        //     gettimeofday(&tv, NULL);
+        //     zprintf1("DeviceMng device[%d] Initmem error time: %d!\n", cfg.id , tv.tv_sec);
+        //     return false;
+        // }
     }
     m_pMngServ->m_appMsgKey = usekey;
 
@@ -212,7 +213,6 @@ bool DeviceMng::SetupDriver(void)
     zprintf3("DeviceMng device SetupDriver end time: %d.\n" ,tv.tv_sec);
 
     m_pMngServ->startRecvDrivMsgProcess();
-    // m_recvAppMsg.z_pthread_init(msgmng_apprecv_back, this, "msgservapprecv");
     return true;
 }
 
@@ -226,7 +226,7 @@ void DeviceMng::DriverHeartMng(void)
     // int                    ret;
     mDrivMap::iterator item;
     uint8_t                data;
-
+    lock_guard<MUTEX_CLASS> lock(m_pMngServ->m_mapMutex);
     for (item = m_pMngServ->m_drivMap.begin(); item != m_pMngServ->m_drivMap.end(); ++item)
     {
         if(item.value()->m_heartMark) //心跳错误
@@ -235,7 +235,7 @@ void DeviceMng::DriverHeartMng(void)
             {
                 item.value()->m_comState = COMSTATE_ABNORMAL;
                 data                   = (uint8_t) item.key();
-                // m_pMsgMngServer->BroadcastToApp(MSG_TYPE_AppReportDriverComAbnormal, &data, 1);
+                m_pMngServ->broadcastToApp(MSG_TYPE_AppReportDriverComAbnormal, &data, 1);
                 zprintf1("DeviceMng report driver%d com abnormal!\n", item.value()->m_driverId);
             }
 
@@ -246,7 +246,7 @@ void DeviceMng::DriverHeartMng(void)
             {
                 item.value()->m_comState = COMSTATE_NORMAL;
                 data                   = (uint8_t) item.key();
-                // pMsgMng->BroadcastToApp(MSG_TYPE_AppReportDriverComNormal, &data, 1);
+                m_pMngServ->broadcastToApp(MSG_TYPE_AppReportDriverComNormal, &data, 1);
                 zprintf1("DeviceMng report driver%d com normal.\n", item.value()->m_driverId);
             }
 
@@ -278,7 +278,8 @@ DeviceMngApp::DeviceMngApp()
 }
 DeviceMngApp::~DeviceMngApp()
 {
-    ;
+    CfgList.clear();
+    DELETE(m_pMngApp);
 }
 
 bool DeviceMngApp::setupDriver(uint32_t timeout)
@@ -368,6 +369,7 @@ int  DeviceMngApp::initApp(void)
         zprintf1("LibDeviceMng driver init fail!\n");
         return -6;
     }
+    m_pMngApp->appStartRecvMsg();
     m_initOk = true;
     zprintf3("LibDeviceMng driver init InitFinishFlag true!\n");
     return 1;

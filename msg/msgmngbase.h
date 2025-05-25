@@ -21,7 +21,7 @@ public:
     MUTEX_CLASS     m_mapMutex;
 public:
     DrivAppMap();
-    ~DrivAppMap();
+    virtual ~DrivAppMap();
     bool findApp(uint32_t id, app** ppapp);
     bool deleteApp(uint32_t id);
     bool findDriver(uint8_t id, driver** ppdriver);
