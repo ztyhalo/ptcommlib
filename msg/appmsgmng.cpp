@@ -92,8 +92,8 @@ bool AppMsgMng::waitServerInfo(sMsgUnit & pkt)
     int len;
     while(m_recvServMsg.receive_object(pkt, 0, len))
     {
-        zprintf3("MsgMngApp app id %d  id %d len %d!\n", pkt.dest.app, GET_APP_ID, len);
-        if (pkt.dest.app == GET_APP_ID && pkt.dest.app == BROADCAST_ID)
+        zprintf3("MsgMngApp app id %d  id %d len %d type %d data %d!\n", pkt.dest.app, GET_APP_ID, len, pkt.type, pkt.data[0]);
+        if (pkt.dest.app == GET_APP_ID)// && pkt.dest.app == BROADCAST_ID)
         {
             if(pkt.type == MSG_TYPE_AppLogIn && (len == (MSG_UNIT_HEAD_LEN + LOGIN_ACK_MSG_LEN)) && (pkt.data[0] == MSG_ERROR_NoError))
             {
@@ -125,15 +125,18 @@ bool AppMsgMng::waitDriverInfo(sMsgUnit & pkt)
     while(m_appRecvMsg.receive_object(pkt, 0, len))
     {
         zprintf3("MsgMngApp driver app id %d  id %d len %d!\n", pkt.dest.app, GET_APP_ID, len);
-        if (pkt.dest.app == GET_APP_ID && pkt.dest.app == BROADCAST_ID)
+        if (pkt.dest.app == GET_APP_ID) // && pkt.dest.app == BROADCAST_ID)
         {
             if(pkt.type == MSG_TYPE_DriverGetInfo)
             {
                 if (findDriver(pkt.source.driver.id_driver, &pdriver))
                 {
-                    pdriver->m_driverInfo.TotalInCnt    = (uint16_t) (((uint16_t) pkt.data[0] << 8) | pkt.data[1]);
-                    pdriver->m_driverInfo.TotalOutCnt   = (uint16_t) (((uint16_t) pkt.data[2] << 8) | pkt.data[3]);
-                    pdriver->m_driverInfo.TotalStateCnt = (uint16_t) (((uint16_t) pkt.data[4] << 8) | pkt.data[5]);
+                    // pdriver->m_driverInfo.TotalInCnt    = (uint16_t) (((uint16_t) pkt.data[0] << 8) | pkt.data[1]);
+                    // pdriver->m_driverInfo.TotalOutCnt   = (uint16_t) (((uint16_t) pkt.data[2] << 8) | pkt.data[3]);
+                    // pdriver->m_driverInfo.TotalStateCnt = (uint16_t) (((uint16_t) pkt.data[4] << 8) | pkt.data[5]);
+                    memcpy(&pdriver->m_driverInfo, &pkt.data[0], sizeof(sDriverInfoType));
+                    zprintf3("appmsgmng diriver %d totalincunt %d out %d state %d!\n", pkt.source.driver.id_driver,
+                        pdriver->m_driverInfo.TotalInCnt, pdriver->m_driverInfo.TotalOutCnt, pdriver->m_driverInfo.TotalStateCnt);
                 }
                 return true;
             }
@@ -161,7 +164,7 @@ bool AppMsgMng::loginRecvMail(void)
     pkt.type       = MSG_TYPE_AppLogIn;
     pkt.data[0]    = m_isRecv;
 
-    zprintf3("LibDeviceMng IsRecv: %d" , m_isRecv);
+    zprintf3("LibDeviceMng IsRecv: %d!\n" , m_isRecv);
 
     m_loginKeyId = 0;
 

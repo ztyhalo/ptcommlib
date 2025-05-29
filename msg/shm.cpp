@@ -137,7 +137,8 @@ bool shm::shm_read(int parentid, int childid, int pointid, int type, double* pva
     }
     else
     {
-        zprintf1("DeviceMng read_object.nofind %d parentid: %d func %d!\n", item.key(), parentid,
+        zprintf4("DeviceMng find %d.%d.%d type %d error!\n", parentid, childid, pointid, type);
+        zprintf4("DeviceMng read_object.nofind %d parentid: %d func %d!\n", item.key(), parentid,
                    SERIALIZE_FUNC(parentid, childid, pointid,type));
         return false;
     }

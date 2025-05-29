@@ -213,6 +213,7 @@ bool DeviceMng::SetupDriver(void)
     zprintf3("DeviceMng device SetupDriver end time: %d.\n" ,tv.tv_sec);
 
     m_pMngServ->startRecvDrivMsgProcess();
+    m_pMngServ->startRecvAppMsgProcess();  //开启appmsg接收处理任务
     return true;
 }
 
